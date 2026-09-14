@@ -77,6 +77,17 @@ module Ably
       def_delegators :@rest_client, :log_level
       def_delegators :@rest_client, :options
 
+      # Refuses direct construction: the package a client is created from is what declares
+      # the client's side to the platform, and a directly constructed client declares none.
+      # Use {Ably::PubSub::Server.create_realtime_client} from the +ably-pubsub-server+ gem.
+      #
+      # @raise [Ably::Exceptions::DirectConstructionNotSupported] always
+      def self.new(*args, **kwargs, &block)
+        raise Ably::Internal.direct_construction_error(
+          'Ably::Realtime::Client.new', 'Ably::PubSub::Server.create_realtime_client(options)'
+        )
+      end
+
       # Creates a {Ably::Realtime::Client Realtime Client} and configures the {Ably::Auth} object for the connection.
       #
       # @spec RSC1
@@ -100,11 +111,14 @@ module Ably
       # @return [Ably::Realtime::Client]
       #
       # @example
-      #    # Constructs a {Ably::Realtime::Client} object using an Ably API key or token string.
-      #    client = Ably::Realtime::Client.new('key.id:secret')
+      #    # Constructs a client using an Ably API key or token string.
+      #    client = Ably::PubSub::Server.create_realtime_client('key.id:secret')
       #
-      #    # Constructs a {Ably::Realtime::Client} object using an Ably options object.
-      #    client = Ably::Realtime::Client.new(key: 'key.id:secret', client_id: 'john')
+      #    # Constructs a client using an Ably options object.
+      #    client = Ably::PubSub::Server.create_realtime_client(key: 'key.id:secret', client_id: 'john')
+      #
+      # Applications do not call this constructor: {.new} refuses direct construction, and
+      # a per-side package reaches it through {Ably::Internal.create_realtime_client}.
       #
       def initialize(options)
         raise ArgumentError, 'Options Hash is expected' if options.nil?
@@ -121,7 +135,7 @@ module Ably
         @transport_params      = options.delete(:transport_params).to_h.each_with_object({}) do |(key, value), acc|
           acc[key.to_s] = value.to_s
         end
-        @rest_client           = Ably::Rest::Client.new(options.merge(realtime_client: self))
+        @rest_client           = Ably::Internal.create_rest_client(options.merge(realtime_client: self))
         @echo_messages         = rest_client.options.fetch_with_default(:echo_messages, true)
         @queue_messages        = rest_client.options.fetch_with_default(:queue_messages, true)
         @custom_realtime_host  = rest_client.options[:realtime_host] || rest_client.options[:ws_host]

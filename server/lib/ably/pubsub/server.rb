@@ -3,8 +3,9 @@ require 'ably/pubsub/server/version'
 
 module Ably
   module PubSub
-    # The Ably Pub/Sub SDK for servers. The factory functions here are the only
-    # recommended entry points of the +ably-pubsub-server+ gem.
+    # The Ably Pub/Sub SDK for servers. The factory functions here are the only entry
+    # points of the +ably-pubsub-server+ gem: the client classes refuse direct construction
+    # (see {Ably::Internal}), so a client always carries the side its package declares.
     module Server
       # The agent identifier declaring the server side.
       #
@@ -29,7 +30,7 @@ module Ably
         #
         # @return [Ably::Rest::Client]
         def create_http_client(options)
-          Ably::Rest::Client.new(options_with_side_agent(options))
+          Ably::Internal.create_rest_client(options_with_side_agent(options))
         end
 
         # Creates a stateful realtime client declaring the server side.
@@ -39,7 +40,7 @@ module Ably
         #
         # @return [Ably::Realtime::Client]
         def create_realtime_client(options)
-          Ably::Realtime::Client.new(options_with_side_agent(options))
+          Ably::Internal.create_realtime_client(options_with_side_agent(options))
         end
 
         private

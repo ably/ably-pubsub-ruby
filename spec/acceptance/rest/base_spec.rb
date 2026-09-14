@@ -7,7 +7,7 @@ describe Ably::Rest do
 
     let(:client_options) { {} }
     let(:client) do
-      Ably::Rest::Client.new(client_options.merge(key: 'appid.keyuid:keysecret', log_retries_as_info: true))
+      Ably::Internal.create_rest_client(client_options.merge(key: 'appid.keyuid:keysecret', log_retries_as_info: true))
     end
 
     let(:now) { Time.now - 1000 }
@@ -67,13 +67,13 @@ describe Ably::Rest do
 
   vary_by_protocol do
     let(:client) do
-      Ably::Rest::Client.new(key: api_key, environment: environment, protocol: protocol, log_retries_as_info: true)
+      Ably::Internal.create_rest_client(key: api_key, environment: environment, protocol: protocol, log_retries_as_info: true)
     end
 
     describe 'failed requests' do
       context 'due to invalid Auth' do
         it 'should raise an UnauthorizedRequest exception with a valid error message and code' do
-          invalid_client = Ably::Rest::Client.new(key: 'appid.keyuid:keysecret', environment: environment)
+          invalid_client = Ably::Internal.create_rest_client(key: 'appid.keyuid:keysecret', environment: environment)
           expect { invalid_client.channel('test').publish('foo', 'choo') }.to raise_error do |error|
             expect(error).to be_a(Ably::Exceptions::UnauthorizedRequest)
             expect(error.code).to eql(40101)
@@ -156,7 +156,7 @@ describe Ably::Rest do
       end
 
       context 'when NOT auth#token_renewable?' do
-        let(:client) { Ably::Rest::Client.new(token: 'token ID cannot be used to create a new token', environment: environment, protocol: protocol) }
+        let(:client) { Ably::Internal.create_rest_client(token: 'token ID cannot be used to create a new token', environment: environment, protocol: protocol) }
 
         it 'should raise an TokenExpired exception' do
           client.channel(channel).publish('evt', 'msg')

@@ -4,7 +4,7 @@ require 'shared/client_initializer_behaviour'
 
 describe Ably::Realtime::Client do
   subject(:realtime_client) do
-    Ably::Realtime::Client.new(client_options)
+    Ably::Internal.create_realtime_client(client_options)
   end
 
   it_behaves_like 'a client initializer'
@@ -14,7 +14,7 @@ describe Ably::Realtime::Client do
 
     it 'passes on the options to the initializer' do
       rest_client = instance_double('Ably::Rest::Client', auth: instance_double('Ably::Auth'), options: client_options, environment: 'production', use_tls?: true, custom_tls_port: nil)
-      expect(Ably::Rest::Client).to receive(:new).with(hash_including(client_options)).and_return(rest_client)
+      expect(Ably::Internal).to receive(:create_rest_client).with(hash_including(client_options)).and_return(rest_client)
       realtime_client
     end
 

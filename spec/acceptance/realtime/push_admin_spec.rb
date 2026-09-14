@@ -10,7 +10,7 @@ describe Ably::Realtime::Push::Admin, :event_machine do
     let(:default_options) { { key: api_key, environment: environment, protocol: protocol} }
     let(:client_options)  { default_options }
     let(:client) do
-      Ably::Realtime::Client.new(client_options)
+      Ably::Internal.create_realtime_client(client_options)
     end
 
     let(:basic_notification_payload) do

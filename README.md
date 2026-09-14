@@ -69,10 +69,10 @@ To use the Ably Realtime SDK in Ruby, the `EventMachine` reactor loop must be ru
 Wrap your code inside a `EventMachine.run` block:
 
 ```ruby
-require 'ably'
+require 'ably/pubsub/server'
 
 EventMachine.run do
-  client = Ably::Realtime.new(key: 'your-api-key')
+  client = Ably::PubSub::Server.create_realtime_client(key: 'your-api-key')
 
   client.connection.connect do
     puts "Connected with connection ID: #{client.connection.id}"
@@ -87,7 +87,7 @@ The following code connects to Ably's realtime messaging service, subscribes to 
 
 ```ruby
   # Initialize Ably Realtime client
-  realtime_client = Ably::Realtime.new(key: 'your-ably-api-key', client_id: 'me')
+  realtime_client = Ably::PubSub::Server.create_realtime_client(key: 'your-ably-api-key', client_id: 'me')
   
   # Wait for connection to be established
   realtime_client.connection.on(:connected) do

@@ -15,7 +15,7 @@ describe Ably::Rest::Channels do
 
   vary_by_protocol do
     let(:client) do
-      Ably::Rest::Client.new(key: api_key, environment: environment, protocol: protocol)
+      Ably::Internal.create_rest_client(key: api_key, environment: environment, protocol: protocol)
     end
     let(:channel_name) { random_str }
     let(:options)      { { key: 'value' } }

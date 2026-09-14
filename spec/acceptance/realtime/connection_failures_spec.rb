@@ -11,10 +11,10 @@ describe Ably::Realtime::Connection, 'failures', :event_machine do
 
     let(:client_options) { default_options }
     let(:client) do
-      auto_close Ably::Realtime::Client.new(client_options)
+      auto_close Ably::Internal.create_realtime_client(client_options)
     end
     let(:rest_client) do
-      Ably::Rest::Client.new(default_options)
+      Ably::Internal.create_rest_client(default_options)
     end
 
     context 'authentication failure' do
@@ -151,7 +151,7 @@ describe Ably::Realtime::Connection, 'failures', :event_machine do
 
             # Timeout +5 seconds, beyond default allowed timeout
             before do
-              token_response = Ably::Rest::Client.new(default_options).auth.request_token
+              token_response = Ably::Internal.create_rest_client(default_options).auth.request_token
               WebMock.enable!
 
               stub_request(:get, auth_url).
@@ -559,7 +559,7 @@ describe Ably::Realtime::Connection, 'failures', :event_machine do
       let(:channel_name) { random_str }
       let(:channel) { client.channel(channel_name) }
       let(:publishing_client) do
-        auto_close Ably::Realtime::Client.new(client_options)
+        auto_close Ably::Internal.create_realtime_client(client_options)
       end
       let(:publishing_client_channel) { publishing_client.channel(channel_name) }
       let(:client_options) { default_options.merge(log_level: :none) }

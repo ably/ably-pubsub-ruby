@@ -21,7 +21,7 @@ describe Ably::Realtime::Channels, :event_machine do
       { key: api_key, environment: environment, protocol: protocol }
     end
     let(:client) do
-      auto_close Ably::Realtime::Client.new(client_options)
+      auto_close Ably::Internal.create_realtime_client(client_options)
     end
     let(:channel_name) { random_str }
     let(:options) do

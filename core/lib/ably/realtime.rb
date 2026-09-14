@@ -28,10 +28,10 @@ require 'ably/realtime/client/incoming_message_dispatcher'
 require 'ably/realtime/client/outgoing_message_dispatcher'
 
 module Ably
-  # Realtime provides the top-level class to be instanced for the Ably Realtime library
+  # Realtime is the namespace of the stateful realtime client and the models it returns.
   #
   # @example
-  #   client = Ably::Realtime.new("xxxxx")
+  #   client = Ably::PubSub::Server.create_realtime_client("xxxxx")
   #   channel = client.channel("test")
   #   channel.subscribe do |message|
   #     message[:name] #=> "greeting"
@@ -39,22 +39,18 @@ module Ably
   #   channel.publish "greeting", "data"
   #
   module Realtime
-    # Convenience method providing an alias to {Ably::Realtime::Client} constructor.
+    # Refuses construction. This was a convenience alias for the {Ably::Realtime::Client}
+    # constructor, which no longer accepts direct construction: the package a client is
+    # created from is what declares the client's side to the platform, and a client
+    # constructed here declares none.
     #
-    # @param (see Ably::Realtime::Client#initialize)
-    # @option options (see Ably::Realtime::Client#initialize)
+    # Use {Ably::PubSub::Server.create_realtime_client} from the +ably-pubsub-server+ gem.
     #
-    # @return [Ably::Realtime::Client]
-    #
-    # @example
-    #    # create a new client authenticating with basic auth
-    #    client = Ably::Realtime.new('key.id:secret')
-    #
-    #    # create a new client authenticating with basic auth and a client_id
-    #    client = Ably::Realtime.new(key: 'key.id:secret', client_id: 'john')
-    #
-    def self.new(options)
-      Ably::Realtime::Client.new(options)
+    # @raise [Ably::Exceptions::DirectConstructionNotSupported] always
+    def self.new(*args, **kwargs, &block)
+      raise Ably::Internal.direct_construction_error(
+        'Ably::Realtime.new', 'Ably::PubSub::Server.create_realtime_client(options)'
+      )
     end
   end
 end

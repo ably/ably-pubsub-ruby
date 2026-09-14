@@ -64,7 +64,7 @@ module Ably
       #
       # @example
       #    # will issue a simple token request using basic auth
-      #    client = Ably::Rest::Client.new(key: 'key.id:secret')
+      #    client = Ably::PubSub::Server.create_realtime_client(key: 'key.id:secret')
       #    client.auth.authorize do |token_details|
       #      token_details #=> Ably::Models::TokenDetails
       #    end
@@ -160,7 +160,7 @@ module Ably
       #
       # @example
       #    # simple token request using basic auth
-      #    client = Ably::Rest::Client.new(key: 'key.id:secret')
+      #    client = Ably::PubSub::Server.create_realtime_client(key: 'key.id:secret')
       #    client.auth.request_token do |token_details|
       #      token_details #=> Ably::Models::TokenDetails
       #    end

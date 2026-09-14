@@ -3,7 +3,7 @@
 This repository hosts two gems, released in lockstep at the same version:
 
 - [`core/`](./core) — `ably-pubsub-core`: the shared implementation. An internal package; only Ably packages depend on it.
-- [`server/`](./server) — `ably-pubsub-server`: the public server-side package. Its factory functions (`Ably::PubSub::Server.create_http_client` / `.create_realtime_client`) are the only recommended entry points.
+- [`server/`](./server) — `ably-pubsub-server`: the public server-side package. Its factory functions (`Ably::PubSub::Server.create_http_client` / `.create_realtime_client`) are the only entry points: the client classes refuse direct construction, and these factories reach them through `Ably::Internal`.
 
 ## Development
 

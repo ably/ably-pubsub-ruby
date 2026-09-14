@@ -48,7 +48,7 @@ describe Ably::Rest::Client, '#stats' do
   end
 
   vary_by_protocol do
-    let(:client) {  Ably::Rest::Client.new(key: api_key, environment: environment, protocol: protocol) }
+    let(:client) {  Ably::Internal.create_rest_client(key: api_key, environment: environment, protocol: protocol) }
 
     describe 'fetching application stats' do
       it 'returns a PaginatedResult object' do

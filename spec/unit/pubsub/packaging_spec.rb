@@ -39,6 +39,27 @@ describe 'Pub/Sub gem packaging' do
     expect(core_spec.files.grep(%r{\Alib/submodules/})).to be_empty
   end
 
+  # spec.files comes from `git ls-files`, so a Ruby file that has not been added to the
+  # index is silently left out of the built gem, and the omission surfaces only as a
+  # LoadError or NameError on a consumer's machine after publish.
+  source_files_on_disk = lambda do |dir|
+    Dir.glob(File.join(repo_root, dir, 'lib/**/*.rb'))
+       .map { |path| path.sub(File.join(repo_root, dir, ''), '') }
+       .reject { |path| path.start_with?('lib/submodules/') }
+  end
+
+  it 'core ships every Ruby file under core/lib' do
+    on_disk = source_files_on_disk.call('core')
+    expect(on_disk).to_not be_empty
+    expect(on_disk - core_spec.files).to be_empty
+  end
+
+  it 'server ships every Ruby file under server/lib' do
+    on_disk = source_files_on_disk.call('server')
+    expect(on_disk).to_not be_empty
+    expect(on_disk - server_spec.files).to be_empty
+  end
+
   it 'releases both gems at one version (lockstep)' do
     expect(server_spec.version).to eql(core_spec.version)
   end

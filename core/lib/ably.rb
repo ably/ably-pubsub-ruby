@@ -14,3 +14,6 @@ require 'ably/exceptions'
 require 'ably/logger'
 require 'ably/realtime'
 require 'ably/rest'
+
+# Requires the client classes above: it constructs them.
+require 'ably/internal'

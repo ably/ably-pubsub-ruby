@@ -165,5 +165,10 @@ module Ably
     class InvalidTokenRequest < BaseAblyException; end
 
     class PushNotificationsNotSupported < BaseAblyException; end
+
+    # A client class was constructed directly rather than through the factory function of
+    # an Ably per-side package. The package a client is created from is what declares the
+    # client's side to the platform, so a directly constructed client declares none.
+    class DirectConstructionNotSupported < BaseAblyException; end
   end
 end

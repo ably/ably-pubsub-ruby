@@ -4,7 +4,7 @@ require 'base64'
 
 describe Ably::Models::MessageEncoders do
   let(:default_client_options) { { key: api_key, environment: environment } }
-  let(:client)                 { Ably::Rest::Client.new(default_client_options.merge(protocol: protocol)) }
+  let(:client)                 { Ably::Internal.create_rest_client(default_client_options.merge(protocol: protocol)) }
   let(:channel_options)        { {} }
   let(:channel)                { client.channel('test', channel_options) }
   let(:response)               { instance_double('Faraday::Response', status: 201) }
