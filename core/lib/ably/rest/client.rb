@@ -125,6 +125,17 @@ module Ably
       # @return [Integer]
       attr_reader :max_frame_size
 
+      # Refuses direct construction: the package a client is created from is what declares
+      # the client's side to the platform, and a directly constructed client declares none.
+      # Use {Ably::PubSub::Server.create_http_client} from the +ably-pubsub-server+ gem.
+      #
+      # @raise [Ably::Exceptions::DirectConstructionNotSupported] always
+      def self.new(*args, **kwargs, &block)
+        raise Ably::Internal.direct_construction_error(
+          'Ably::Rest::Client.new', 'Ably::PubSub::Server.create_http_client(options)'
+        )
+      end
+
       # Constructs a {Ably::Rest::Client} object using an Ably API key or token string.
       #
       # @spec RSC1
@@ -168,10 +179,13 @@ module Ably
       #
       # @example
       #    # Create a new client authenticating with basic auth using a String object
-      #    client = Ably::Rest::Client.new('key.id:secret')
+      #    client = Ably::PubSub::Server.create_http_client('key.id:secret')
       #
-      #    # Construct a RestClient object using a Hash object.
-      #    client = Ably::Rest::Client.new(key: 'key.id:secret', client_id: 'john')
+      #    # Construct a client using a Hash object.
+      #    client = Ably::PubSub::Server.create_http_client(key: 'key.id:secret', client_id: 'john')
+      #
+      # Applications do not call this constructor: {.new} refuses direct construction, and
+      # a per-side package reaches it through {Ably::Internal.create_rest_client}.
       #
       def initialize(options)
         raise ArgumentError, 'Options Hash is expected' if options.nil?

@@ -246,7 +246,7 @@ module Ably
       #                  If the ping is not received within an acceptable timeframe, the block will be called with +nil+ as he first argument
       #
       # @example
-      #    client = Ably::Rest::Client.new(key: 'key.id:secret')
+      #    client = Ably::PubSub::Server.create_realtime_client(key: 'key.id:secret')
       #    client.connection.ping do |elapsed_s|
       #      puts "Ping took #{elapsed_s}s"
       #    end

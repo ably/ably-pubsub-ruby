@@ -8,7 +8,7 @@ describe Ably::Rest::Channel do
     let(:default_options) { { key: api_key, environment: environment, protocol: protocol, max_frame_size: max_frame_size, max_message_size: max_message_size, idempotent_rest_publishing: false } }
     let(:client_options)  { default_options }
     let(:client) do
-      Ably::Rest::Client.new(client_options)
+      Ably::Internal.create_rest_client(client_options)
     end
     let(:max_message_size) { nil }
     let(:max_frame_size) { nil }
@@ -232,9 +232,9 @@ describe Ably::Rest::Channel do
 
       context 'identified clients' do
         context 'when authenticated with a wildcard client_id' do
-          let(:token)            { Ably::Rest::Client.new(default_options).auth.request_token(client_id: '*') }
+          let(:token)            { Ably::Internal.create_rest_client(default_options).auth.request_token(client_id: '*') }
           let(:client_options)   { default_options.merge(key: nil, token: token) }
-          let(:client)           { Ably::Rest::Client.new(client_options) }
+          let(:client)           { Ably::Internal.create_rest_client(client_options) }
           let(:channel)          { client.channels.get(channel_name) }
 
           context 'with a valid client_id in the message' do
@@ -263,9 +263,9 @@ describe Ably::Rest::Channel do
         end
 
         context 'when authenticated with a Token string with an implicit client_id' do
-          let(:token)            { Ably::Rest::Client.new(default_options).auth.request_token(client_id: 'valid').token }
+          let(:token)            { Ably::Internal.create_rest_client(default_options).auth.request_token(client_id: 'valid').token }
           let(:client_options)   { default_options.merge(key: nil, token: token) }
-          let(:client)           { Ably::Rest::Client.new(client_options) }
+          let(:client)           { Ably::Internal.create_rest_client(client_options) }
           let(:channel)          { client.channels.get(channel_name) }
 
           context 'without having a confirmed identity' do
@@ -296,9 +296,9 @@ describe Ably::Rest::Channel do
         end
 
         context 'when authenticated with TokenDetails with a valid client_id' do
-          let(:token)            { Ably::Rest::Client.new(default_options).auth.request_token(client_id: 'valid') }
+          let(:token)            { Ably::Internal.create_rest_client(default_options).auth.request_token(client_id: 'valid') }
           let(:client_options)   { default_options.merge(key: nil, token: token) }
-          let(:client)           { Ably::Rest::Client.new(client_options) }
+          let(:client)           { Ably::Internal.create_rest_client(client_options) }
           let(:channel)          { client.channels.get(channel_name) }
 
           context 'with a valid client_id in the message' do
@@ -333,9 +333,9 @@ describe Ably::Rest::Channel do
         end
 
         context 'when anonymous and no client_id' do
-          let(:token)            { Ably::Rest::Client.new(default_options).auth.request_token(client_id: nil) }
+          let(:token)            { Ably::Internal.create_rest_client(default_options).auth.request_token(client_id: nil) }
           let(:client_options)   { default_options.merge(key: nil, token: token) }
-          let(:client)           { Ably::Rest::Client.new(client_options) }
+          let(:client)           { Ably::Internal.create_rest_client(client_options) }
           let(:channel)          { client.channels.get(channel_name) }
 
           context 'with a client_id in the message' do

@@ -7,7 +7,7 @@ describe Ably::Rest::Client do
     let(:default_options) { { environment: environment, protocol: protocol, log_retries_as_info: true } }
     let(:client_options)  { default_options }
 
-    let(:client) { Ably::Rest::Client.new(client_options) }
+    let(:client) { Ably::Internal.create_rest_client(client_options) }
 
     http_defaults = Ably::Rest::Client::HTTP_DEFAULTS
 
@@ -20,7 +20,7 @@ describe Ably::Rest::Client do
       let(:token_request) { client.auth.create_token_request({}, key_name: key_name, key_secret: key_secret, client_id: client_id) }
 
       context 'with only an API key' do
-        let(:client) { Ably::Rest::Client.new(client_options.merge(key: api_key)) }
+        let(:client) { Ably::Internal.create_rest_client(client_options.merge(key: api_key)) }
 
         it 'uses basic authentication' do
           expect(client.auth).to be_using_basic_auth
@@ -28,7 +28,7 @@ describe Ably::Rest::Client do
       end
 
       context 'with an invalid API key' do
-        let(:client) { Ably::Rest::Client.new(client_options.merge(key: 'app.key:secret', log_level: :fatal)) }
+        let(:client) { Ably::Internal.create_rest_client(client_options.merge(key: 'app.key:secret', log_level: :fatal)) }
 
         it 'logs an entry with a help href url matching the code #TI5' do
           begin
@@ -41,7 +41,7 @@ describe Ably::Rest::Client do
       end
 
       context 'with an explicit string :token' do
-        let(:client) { Ably::Rest::Client.new(client_options.merge(token: random_str)) }
+        let(:client) { Ably::Internal.create_rest_client(client_options.merge(token: random_str)) }
 
         it 'uses token authentication' do
           expect(client.auth).to be_using_token_auth
@@ -49,7 +49,7 @@ describe Ably::Rest::Client do
       end
 
       context 'with :use_token_auth set to true' do
-        let(:client) { Ably::Rest::Client.new(client_options.merge(key: api_key, use_token_auth: true)) }
+        let(:client) { Ably::Internal.create_rest_client(client_options.merge(key: api_key, use_token_auth: true)) }
 
         it 'uses token authentication' do
           expect(client.auth).to be_using_token_auth
@@ -57,7 +57,7 @@ describe Ably::Rest::Client do
       end
 
       context 'with a non string :client_id' do
-        let(:client) { Ably::Rest::Client.new(client_options.merge(key: api_key, client_id: 1)) }
+        let(:client) { Ably::Internal.create_rest_client(client_options.merge(key: api_key, client_id: 1)) }
 
         it 'raises an ArgumentError' do
           expect { client.auth }.to raise_error ArgumentError, /client_id.*String/
@@ -66,12 +66,12 @@ describe Ably::Rest::Client do
 
       context 'with an invalid wildcard "*" :client_id' do
         it 'raises an exception' do
-          expect { Ably::Rest::Client.new(client_options.merge(key: api_key, client_id: '*')) }.to raise_error ArgumentError
+          expect { Ably::Internal.create_rest_client(client_options.merge(key: api_key, client_id: '*')) }.to raise_error ArgumentError
         end
       end
 
       context 'with an :auth_callback lambda' do
-        let(:client) { Ably::Rest::Client.new(client_options.merge(auth_callback: lambda { |token_params| token_request })) }
+        let(:client) { Ably::Internal.create_rest_client(client_options.merge(auth_callback: lambda { |token_params| token_request })) }
 
         it 'calls the auth lambda to get a new token' do
           expect { client.channel('channel_name').publish('event', 'message') }.to change { client.auth.current_token_details }
@@ -85,7 +85,7 @@ describe Ably::Rest::Client do
 
       context 'with :default_token_params' do
         let(:client) do
-          Ably::Rest::Client.new(client_options.merge(
+          Ably::Internal.create_rest_client(client_options.merge(
             default_token_params: { client_id: 'bob' },
             use_token_auth: true,
             key: api_key
@@ -99,7 +99,7 @@ describe Ably::Rest::Client do
       end
 
       context 'with an :auth_callback lambda (clientId provided in library options instead of as a token_request param)' do
-        let(:client) { Ably::Rest::Client.new(client_options.merge(client_id: client_id, auth_callback: lambda { |token_params| token_request })) }
+        let(:client) { Ably::Internal.create_rest_client(client_options.merge(client_id: client_id, auth_callback: lambda { |token_params| token_request })) }
         let(:token_request) { client.auth.create_token_request({}, key_name: key_name, key_secret: key_secret) }
 
         it 'correctly sets the clientId on the token' do
@@ -184,7 +184,7 @@ describe Ably::Rest::Client do
 
     context 'using tokens' do
       let(:client) do
-        Ably::Rest::Client.new(client_options.merge(auth_callback: lambda do |token_params|
+        Ably::Internal.create_rest_client(client_options.merge(auth_callback: lambda do |token_params|
           @request_index ||= 0
           @request_index += 1
           send("token_request_#{@request_index > 2 ? 'next' : @request_index}")
@@ -1349,8 +1349,8 @@ describe Ably::Rest::Client do
         let(:token_params) { { nonce: "samenonce_#{protocol}", timestamp:  Time.now.to_i } }
 
         it 'includes request_id in UnauthorizedRequest error due to replayed nonce' do
-          client1 = Ably::Rest::Client.new(default_options.merge(key: api_key))
-          client2 = Ably::Rest::Client.new(default_options.merge(key: api_key, add_request_ids: true))
+          client1 = Ably::Internal.create_rest_client(default_options.merge(key: api_key))
+          client2 = Ably::Internal.create_rest_client(default_options.merge(key: api_key, add_request_ids: true))
           expect { client1.auth.request_token(token_params) }.not_to raise_error
           begin
             client2.auth.request_token(token_params)

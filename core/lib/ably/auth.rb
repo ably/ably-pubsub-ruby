@@ -123,7 +123,7 @@ module Ably
     #
     # @example
     #    # will issue a simple token request using basic auth
-    #    client = Ably::Rest::Client.new(key: 'key.id:secret')
+    #    client = Ably::PubSub::Server.create_http_client(key: 'key.id:secret')
     #    token_details = client.auth.authorize
     #
     #    # will use token request from block to authorize if not already authorized
@@ -214,7 +214,7 @@ module Ably
     #
     # @example
     #    # simple token request using basic auth
-    #    client = Ably::Rest::Client.new(key: 'key.id:secret')
+    #    client = Ably::PubSub::Server.create_http_client(key: 'key.id:secret')
     #    token_details = client.auth.request_token
     #
     #    # token request with token params

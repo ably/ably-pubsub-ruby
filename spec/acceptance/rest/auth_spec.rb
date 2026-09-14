@@ -29,7 +29,7 @@ describe Ably::Auth do
     let(:default_options) { { environment: environment, protocol: protocol } }
     let(:client_options)  { default_options.merge(key: api_key) }
     let(:client) do
-      Ably::Rest::Client.new(client_options)
+      Ably::Internal.create_rest_client(client_options)
     end
     let(:auth) { client.auth }
     let(:content_type) do
@@ -517,7 +517,7 @@ describe Ably::Auth do
         end
 
         context 'that returns a Token string' do
-          let(:second_client) { Ably::Rest::Client.new(key: api_key, environment: environment, protocol: protocol) }
+          let(:second_client) { Ably::Internal.create_rest_client(key: api_key, environment: environment, protocol: protocol) }
           let(:token) { second_client.auth.request_token.token }
 
           let!(:token_details) do
@@ -798,7 +798,7 @@ describe Ably::Auth do
             @block_called = 0
           end
 
-          let(:token_client)   { Ably::Rest::Client.new(default_options.merge(key: api_key, default_token_params: { ttl: 3 })) }
+          let(:token_client)   { Ably::Internal.create_rest_client(default_options.merge(key: api_key, default_token_params: { ttl: 3 })) }
           let(:client_options) {
             default_options.merge(token: token_client.auth.request_token.token, auth_callback: lambda do |token_params|
               @block_called += 1
@@ -819,7 +819,7 @@ describe Ably::Auth do
       context 'with an explicit ClientOptions client_id' do
         let(:client_id)       { random_str }
         let(:client_options)  { default_options.merge(auth_callback: lambda { |token_params| auth_token_object }, client_id: client_id) }
-        let(:auth_client)     { Ably::Rest::Client.new(default_options.merge(key: api_key, client_id: 'invalid')) }
+        let(:auth_client)     { Ably::Internal.create_rest_client(default_options.merge(key: api_key, client_id: 'invalid')) }
 
         context 'and an incompatible client_id in a TokenDetails object passed to the auth callback' do
           let(:auth_token_object) { auth_client.auth.request_token }
@@ -861,7 +861,7 @@ describe Ably::Auth do
 
       it 'returns a TokenRequest that can be passed to a client that can use it for authentication without an API key' do
         auth_callback = proc { |token_params| subject }
-        client_without_api_key = Ably::Rest::Client.new(default_options.merge(auth_callback: auth_callback))
+        client_without_api_key = Ably::Internal.create_rest_client(default_options.merge(auth_callback: auth_callback))
         expect(client_without_api_key.auth).to be_using_token_auth
         expect { client_without_api_key.auth.authorize }.to_not raise_error
       end
@@ -922,7 +922,7 @@ describe Ably::Auth do
 
         it 'uses these capabilities when Ably issues an actual token' do
           auth_callback = lambda { |token_params| subject }
-          client_without_api_key = Ably::Rest::Client.new(default_options.merge(auth_callback: auth_callback))
+          client_without_api_key = Ably::Internal.create_rest_client(default_options.merge(auth_callback: auth_callback))
           client_without_api_key.auth.authorize
           expect(client_without_api_key.auth.current_token_details.capability).to eql(capability)
         end
@@ -939,7 +939,7 @@ describe Ably::Auth do
       end
 
       context 'when required fields are missing' do
-        let(:client) { Ably::Rest::Client.new(auth_url: 'http://example.com', protocol: protocol) }
+        let(:client) { Ably::Internal.create_rest_client(auth_url: 'http://example.com', protocol: protocol) }
 
         it 'should raise an exception if key secret is missing' do
           expect { auth.create_token_request({}, key_name: 'name') }.to raise_error Ably::Exceptions::TokenRequestFailed
@@ -1033,7 +1033,7 @@ describe Ably::Auth do
             auth_callback = lambda do |callback|
               auth.create_token_request(token_attributes)
             end
-            client = Ably::Rest::Client.new(auth_callback: auth_callback, environment: environment, protocol: protocol)
+            client = Ably::Internal.create_rest_client(auth_callback: auth_callback, environment: environment, protocol: protocol)
             client.auth.authorize
           end
         end
@@ -1053,7 +1053,7 @@ describe Ably::Auth do
         end
         let(:token) { token_details.token }
         let(:token_auth_client) do
-          Ably::Rest::Client.new(token: token, environment: environment, protocol: protocol)
+          Ably::Internal.create_rest_client(token: token, environment: environment, protocol: protocol)
         end
 
         it 'authenticates successfully using the provided :token' do
@@ -1186,10 +1186,10 @@ describe Ably::Auth do
       context 'when :client_id is provided in a token' do
         let(:client_id) { '123' }
         let(:token) do
-          Ably::Rest::Client.new(key: api_key, environment: environment, protocol: protocol).auth.request_token(client_id: client_id)
+          Ably::Internal.create_rest_client(key: api_key, environment: environment, protocol: protocol).auth.request_token(client_id: client_id)
         end
         let(:client) do
-          Ably::Rest::Client.new(token: token, environment: environment, protocol: protocol)
+          Ably::Internal.create_rest_client(token: token, environment: environment, protocol: protocol)
         end
 
         specify '#client_id contains the client_id' do
@@ -1199,7 +1199,7 @@ describe Ably::Auth do
     end
 
     describe '#client_id_validated?' do
-      let(:auth) { Ably::Rest::Client.new(default_options.merge(key: api_key)).auth }
+      let(:auth) { Ably::Internal.create_rest_client(default_options.merge(key: api_key)).auth }
 
       context 'when using basic auth' do
         let(:client_options) { default_options.merge(key: api_key) }
@@ -1293,7 +1293,7 @@ describe Ably::Auth do
     context 'when using JWT' do
       let(:auth_url) { 'https://echo.ably.io/createJWT' }
       let(:token) { Faraday.get("#{auth_url}?keyName=#{key_name}&keySecret=#{key_secret}").body }
-      let(:client) { Ably::Rest::Client.new(token: token, environment: environment, protocol: protocol) }
+      let(:client) { Ably::Internal.create_rest_client(token: token, environment: environment, protocol: protocol) }
 
       it 'authenticates correctly using the JWT token generated by the echo server' do
         expect(client.stats).to_not be_nil()
@@ -1317,7 +1317,7 @@ describe Ably::Auth do
 
       # RSA4f, RSA8c
       context 'when the token requested is returned with application/jwt content type' do
-        let(:auth_rest_client) { Ably::Rest::Client.new(default_options.merge(key: api_key)) }
+        let(:auth_rest_client) { Ably::Internal.create_rest_client(default_options.merge(key: api_key)) }
         let(:auth_params) { { keyName: key_name, keySecret: key_secret, returnType: 'jwt' } }
         let(:token) { auth_rest_client.auth.request_token({ }, { auth_url: auth_url, auth_params: auth_params }).token }
         it 'authenticates correctly and pulls stats' do

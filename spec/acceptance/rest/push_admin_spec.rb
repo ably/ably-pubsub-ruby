@@ -8,7 +8,7 @@ describe Ably::Rest::Push::Admin do
     let(:default_options) { { key: api_key, environment: environment, protocol: protocol} }
     let(:client_options)  { default_options }
     let(:client) do
-      Ably::Rest::Client.new(client_options)
+      Ably::Internal.create_rest_client(client_options)
     end
 
     let(:basic_notification_payload) do

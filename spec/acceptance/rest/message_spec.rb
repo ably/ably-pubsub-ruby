@@ -9,8 +9,8 @@ describe Ably::Rest::Channel, 'messages' do
   vary_by_protocol do
     let(:default_client_options) { { key: api_key, environment: environment, protocol: protocol } }
     let(:client_options)         { default_client_options }
-    let(:client)                 { Ably::Rest::Client.new(client_options) }
-    let(:other_client)           { Ably::Rest::Client.new(client_options) }
+    let(:client)                 { Ably::Internal.create_rest_client(client_options) }
+    let(:other_client)           { Ably::Internal.create_rest_client(client_options) }
     let(:channel)                { client.channel(random_str) }
 
     context 'publishing with an ASCII_8BIT message name' do
@@ -206,16 +206,16 @@ describe Ably::Rest::Channel, 'messages' do
 
       specify 'idempotent publishing is set as per clientOptions' do
         # set idempotent_rest_publishing to false
-        client = Ably::Rest::Client.new(key: api_key, protocol: protocol, idempotent_rest_publishing: false)
+        client = Ably::Internal.create_rest_client(key: api_key, protocol: protocol, idempotent_rest_publishing: false)
         expect(client.idempotent_rest_publishing).to be_falsey
 
         # set idempotent_rest_publishing to true
-        client = Ably::Rest::Client.new(key: api_key, protocol: protocol, idempotent_rest_publishing: true)
+        client = Ably::Internal.create_rest_client(key: api_key, protocol: protocol, idempotent_rest_publishing: true)
         expect(client.idempotent_rest_publishing).to be_truthy
       end
 
       specify 'idempotent publishing is enabled by default (#TO3n)' do
-        client = Ably::Rest::Client.new(key: api_key, protocol: protocol)
+        client = Ably::Internal.create_rest_client(key: api_key, protocol: protocol)
         expect(client.idempotent_rest_publishing).to be_truthy
       end
 
@@ -436,7 +436,7 @@ describe Ably::Rest::Channel, 'messages' do
 
         context 'when retrieving #history with a different protocol' do
           let(:other_protocol)       { protocol == :msgpack ? :json : :msgpack }
-          let(:other_client)         { Ably::Rest::Client.new(default_client_options.merge(protocol: other_protocol)) }
+          let(:other_client)         { Ably::Internal.create_rest_client(default_client_options.merge(protocol: other_protocol)) }
           let(:other_client_channel) { other_client.channel(channel_name, cipher: cipher_options) }
 
           before do

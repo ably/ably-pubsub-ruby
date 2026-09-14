@@ -3,7 +3,7 @@ require 'spec_helper'
 require 'shared/protocol_msgbus_behaviour'
 
 describe Ably::Realtime::Channel do
-  let(:client)       { Ably::Realtime::Client.new(token: 'valid') }
+  let(:client)       { Ably::Internal.create_realtime_client(token: 'valid') }
   let(:channel_name) { 'test' }
 
   subject do

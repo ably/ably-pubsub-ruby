@@ -11,30 +11,26 @@ Dir.glob(File.expand_path("models/*.rb", File.dirname(__FILE__))).each do |file|
 end
 
 module Ably
-  # Rest provides the top-level class to be instanced for the Ably Rest library
+  # Rest is the namespace of the stateless HTTP client and the models it returns.
   #
   # @example
-  #   client = Ably::Rest.new("xxxxx")
+  #   client = Ably::PubSub::Server.create_http_client("xxxxx")
   #   channel = client.channel("test")
   #   channel.publish "greeting", "data"
   #
   module Rest
-    # Convenience method providing an alias to {Ably::Rest::Client} constructor.
+    # Refuses construction. This was a convenience alias for the {Ably::Rest::Client}
+    # constructor, which no longer accepts direct construction: the package a client is
+    # created from is what declares the client's side to the platform, and a client
+    # constructed here declares none.
     #
-    # @param (see Ably::Rest::Client#initialize)
-    # @option options (see Ably::Rest::Client#initialize)
+    # Use {Ably::PubSub::Server.create_http_client} from the +ably-pubsub-server+ gem.
     #
-    # @return [Ably::Rest::Client]
-    #
-    # @example
-    #    # create a new client authenticating with basic auth
-    #    client = Ably::Rest.new('key.id:secret')
-    #
-    #    # create a new client authenticating with basic auth and a client_id
-    #    client = Ably::Rest.new(key: 'key.id:secret', client_id: 'john')
-    #
-    def self.new(options)
-      Ably::Rest::Client.new(options)
+    # @raise [Ably::Exceptions::DirectConstructionNotSupported] always
+    def self.new(*args, **kwargs, &block)
+      raise Ably::Internal.direct_construction_error(
+        'Ably::Rest.new', 'Ably::PubSub::Server.create_http_client(options)'
+      )
     end
   end
 end

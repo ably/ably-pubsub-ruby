@@ -4,7 +4,7 @@ require 'shared/client_initializer_behaviour'
 
 describe Ably::Rest::Client do
   subject do
-    Ably::Rest::Client.new(client_options)
+    Ably::Internal.create_rest_client(client_options)
   end
 
   it_behaves_like 'a client initializer'

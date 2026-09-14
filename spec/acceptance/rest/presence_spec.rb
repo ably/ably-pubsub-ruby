@@ -8,7 +8,7 @@ describe Ably::Rest::Presence do
     let(:default_options) { { key: api_key, environment: environment, protocol: protocol } }
     let(:client_options) { default_options }
     let(:client) do
-      Ably::Rest::Client.new(client_options)
+      Ably::Internal.create_rest_client(client_options)
     end
 
     let(:fixtures) do
@@ -201,7 +201,7 @@ describe Ably::Rest::Presence do
           client.endpoint
         end
         let(:client) do
-          Ably::Rest::Client.new(key: "#{user}:#{secret}")
+          Ably::Internal.create_rest_client(key: "#{user}:#{secret}")
         end
         let(:history_options) do
           {
@@ -326,7 +326,7 @@ describe Ably::Rest::Presence do
         client.endpoint
       end
       let(:client) do
-        Ably::Rest::Client.new(client_options.merge(key: "#{user}:#{secret}"))
+        Ably::Internal.create_rest_client(client_options.merge(key: "#{user}:#{secret}"))
       end
 
       let(:data)            { random_str(32) }
