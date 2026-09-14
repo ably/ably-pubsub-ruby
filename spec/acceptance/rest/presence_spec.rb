@@ -88,6 +88,33 @@ describe Ably::Rest::Presence do
           end
         end
 
+        # The REST API names these params clientId and connectionId. Sending the snake_case
+        # option names instead is not an error the server reports: it ignores unknown query
+        # params and returns the unfiltered presence set, so only the wire format catches it.
+        context 'filter query params', webmock: true do
+          let(:channel_name) { random_str }
+          let(:channel)      { client.channels.get(channel_name) }
+          let(:endpoint)     { client.endpoint }
+
+          def stub_presence_get(query)
+            stub_request(:get, "#{endpoint}/channels/#{URI.encode_www_form_component(channel_name)}/presence").
+              with(query: query).
+              to_return(body: '{}', headers: { 'Content-Type' => 'application/json' })
+          end
+
+          it 'sends :client_id as clientId' do
+            stub = stub_presence_get('limit' => '100', 'clientId' => 'bob')
+            channel.presence.get(client_id: 'bob')
+            expect(stub).to have_been_requested
+          end
+
+          it 'sends :connection_id as connectionId' do
+            stub = stub_presence_get('limit' => '100', 'connectionId' => 'conn-1')
+            channel.presence.get(connection_id: 'conn-1')
+            expect(stub).to have_been_requested
+          end
+        end
+
         context 'with :client_id option' do
           let(:client_id) { non_encoded_fixtures.first[:client_id] }
           let(:presence_page) { fixtures_channel.presence.get(client_id: client_id) }

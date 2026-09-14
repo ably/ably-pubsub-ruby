@@ -51,7 +51,9 @@ module Ably
           async_blocking_operations: options.delete(:async_blocking_operations),
         }
 
-        response = client.get(base_path, options)
+        # The REST API names these query params clientId and connectionId (RSP3a2, RSP3a3),
+        # so the idiomatic snake_case options have to be converted before they are sent.
+        response = client.get(base_path, IdiomaticRubyWrapper(options).as_json)
 
         Ably::Models::PaginatedResult.new(response, base_path, client, paginated_options) do |presence_message|
           presence_message.tap do |message|
