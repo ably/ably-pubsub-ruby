@@ -6,14 +6,14 @@ require 'ably/pubsub/server'
 # directly declares none and the platform cannot classify it for MAU billing. The classes
 # therefore refuse direct construction, and the per-side packages construct through
 # Ably::Internal instead. These specs guard both halves: the refusals must stay in place,
-# and the internal entry points must keep producing usable clients. The Ably::Rest and
-# Ably::Realtime module aliases refuse too, covered in their own module specs.
+# and the internal entry points must keep producing usable clients. The Ably::PubSub::Http and
+# Ably::PubSub::Realtime module aliases refuse too, covered in their own module specs.
 describe 'direct construction' do
   let(:api_key) { 'appid.keyuid:keysecret' }
 
   refused = {
-    'Ably::Rest::Client.new'     => -> (key) { Ably::Rest::Client.new(key) },
-    'Ably::Realtime::Client.new' => -> (key) { Ably::Realtime::Client.new(key) },
+    'Ably::PubSub::Http::Client.new'     => -> (key) { Ably::PubSub::Http::Client.new(key) },
+    'Ably::PubSub::Realtime::Client.new' => -> (key) { Ably::PubSub::Realtime::Client.new(key) },
   }
 
   refused.each do |subject_name, construct|
@@ -41,26 +41,26 @@ describe 'direct construction' do
 
   describe 'Ably::Internal' do
     it 'creates a usable REST client' do
-      client = Ably::Internal.create_rest_client(key: api_key)
-      expect(client).to be_a(Ably::Rest::Client)
+      client = Ably::Internal.create_http_client(key: api_key)
+      expect(client).to be_a(Ably::PubSub::Http::Client)
       expect(client.auth.key).to eql(api_key)
     end
 
     it 'creates a usable realtime client' do
       client = Ably::Internal.create_realtime_client(key: api_key, auto_connect: false)
-      expect(client).to be_a(Ably::Realtime::Client)
-      expect(client.rest_client).to be_a(Ably::Rest::Client)
+      expect(client).to be_a(Ably::PubSub::Realtime::Client)
+      expect(client.rest_client).to be_a(Ably::PubSub::Http::Client)
     end
 
     # The realtime client builds its own REST client; if that call went back through the
     # public constructor, every realtime client would fail to build.
     it 'is what the realtime client uses to build its REST client' do
-      expect(Ably::Internal).to receive(:create_rest_client).once.and_call_original
+      expect(Ably::Internal).to receive(:create_http_client).once.and_call_original
       Ably::Internal.create_realtime_client(key: api_key, auto_connect: false)
     end
 
     it 'declares no side of its own' do
-      client = Ably::Internal.create_rest_client(key: api_key)
+      client = Ably::Internal.create_http_client(key: api_key)
       expect(client.agent).to_not include(Ably::PubSub::Server::SERVER_AGENT_IDENTIFIER)
     end
   end

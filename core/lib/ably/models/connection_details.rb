@@ -14,8 +14,8 @@ module Ably::Models
     end
   end
 
-  # Contains any constraints a client should adhere to and provides additional metadata about a {Ably::Realtime::Connection},
-  # such as if a request to {Ably::Realtime::Client#publish} a message that exceeds the maximum message size should be rejected immediately without communicating with Ably.
+  # Contains any constraints a client should adhere to and provides additional metadata about a {Ably::PubSub::Realtime::Connection},
+  # such as if a request to {Ably::PubSub::Realtime::Client#publish} a message that exceeds the maximum message size should be rejected immediately without communicating with Ably.
   #
   class ConnectionDetails
     include Ably::Modules::ModelCommon

@@ -4,7 +4,7 @@ module Ably::Models
   # that indicates the relative queries available to the PaginatedResult object.
   #
   class PaginatedResult
-    include Ably::Modules::AsyncWrapper if defined?(Ably::Realtime)
+    include Ably::Modules::AsyncWrapper if defined?(Ably::PubSub::Realtime)
 
     # Contains the current page of results; for example, an array of {Ably::Models::Message} or {Ably::Models::PresenceMessage} objects
     # for a channel history request.
@@ -59,7 +59,7 @@ module Ably::Models
 
     # Retrieve the next page of results.
     #
-    # When used as part of the {Ably::Realtime} library, it will return a {Ably::Util::SafeDeferrable} object,
+    # When used as part of the {Ably::PubSub::Realtime} library, it will return a {Ably::Util::SafeDeferrable} object,
     # and allows an optional success callback block to be provided.
     #
     # @spec TG4

@@ -17,7 +17,7 @@ module Ably::Models
     end
   end
 
-  # Sets the properties to configure encryption for a {Ably::Models::Rest::Channel} or {Ably::Models::Realtime::Channel} object.
+  # Sets the properties to configure encryption for a {Ably::PubSub::Http::Channel} or {Ably::PubSub::Realtime::Channel} object.
   #
   class CipherParams
     include Ably::Modules::ModelCommon

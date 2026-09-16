@@ -1,7 +1,7 @@
 # encoding: utf-8
 require 'spec_helper'
 
-describe Ably::Realtime::Channel, '#history', :event_machine do
+describe Ably::PubSub::Realtime::Channel, '#history', :event_machine do
   vary_by_protocol do
     let(:default_options) { options.merge(key: api_key, environment: environment, protocol: protocol) }
 

@@ -1,12 +1,12 @@
 module Ably
   # Logger unifies logging for #debug, #info, #warn, #error, and #fatal messages.
   # A new Ably client uses this Logger and sets the appropriate log level.
-  # A custom Logger can be configured when instantiating the client, refer to the {Ably::Rest::Client} and {Ably::Realtime::Client} documentation
+  # A custom Logger can be configured when instantiating the client, refer to the {Ably::PubSub::Http::Client} and {Ably::PubSub::Realtime::Client} documentation
   #
   class Logger
     extend Forwardable
 
-    # @param client        [Ably::Rest::Client,Ably::Realtime::Client] Rest or Realtime Ably client
+    # @param client        [Ably::PubSub::Http::Client,Ably::PubSub::Realtime::Client] Rest or Realtime Ably client
     # @param log_level     [Integer] {http://www.ruby-doc.org/stdlib-3.1.1/libdoc/logger/rdoc/Logger.html Ruby Logger} log level
     # @param custom_logger [nil,Object] A custom logger can optionally be used instead of the,
     #                      however it must provide a {http://www.ruby-doc.org/stdlib-3.1.1/libdoc/logger/rdoc/Logger.html Ruby Logger} compatible interface.
@@ -83,7 +83,7 @@ module Ably
     end
 
     def realtime?
-      defined?(Ably::Realtime::Client) && client.kind_of?(Ably::Realtime::Client)
+      defined?(Ably::PubSub::Realtime::Client) && client.kind_of?(Ably::PubSub::Realtime::Client)
     end
 
     def default_logger

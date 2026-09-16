@@ -1,7 +1,7 @@
 # encoding: utf-8
 require 'spec_helper'
 
-describe Ably::Realtime::Client, :event_machine do
+describe Ably::PubSub::Realtime::Client, :event_machine do
   vary_by_protocol do
     let(:default_options) do
       { key: api_key, environment: environment, protocol: protocol }
@@ -136,7 +136,7 @@ describe Ably::Realtime::Client, :event_machine do
           context 'with a wildcard client_id token ' do
             subject                 { auto_close Ably::Internal.create_realtime_client(client_options) }
             let(:client_options)    { default_options.merge(auth_callback: lambda { |token_params| auth_token_object }, client_id: client_id) }
-            let(:rest_auth_client)  { Ably::Internal.create_rest_client(default_options.merge(key: api_key)) }
+            let(:rest_auth_client)  { Ably::Internal.create_http_client(default_options.merge(key: api_key)) }
             let(:auth_token_object) { rest_auth_client.auth.request_token(client_id: '*') }
 
             context 'and an explicit client_id in ClientOptions' do
@@ -212,21 +212,21 @@ describe Ably::Realtime::Client, :event_machine do
 
     context '#connection' do
       it 'provides access to the Connection object' do
-        expect(subject.connection).to be_a(Ably::Realtime::Connection)
+        expect(subject.connection).to be_a(Ably::PubSub::Realtime::Connection)
         stop_reactor
       end
     end
 
     context '#channels' do
       it 'provides access to the Channels collection object' do
-        expect(subject.channels).to be_a(Ably::Realtime::Channels)
+        expect(subject.channels).to be_a(Ably::PubSub::Realtime::Channels)
         stop_reactor
       end
     end
 
     context '#auth' do
       it 'provides access to the Realtime::Auth object' do
-        expect(subject.auth).to be_a(Ably::Realtime::Auth)
+        expect(subject.auth).to be_a(Ably::PubSub::Realtime::Auth)
         stop_reactor
       end
     end
@@ -479,7 +479,7 @@ describe Ably::Realtime::Client, :event_machine do
         let(:channel_name) { random_str }
 
         it 'rejects the publish' do
-          messages = (Ably::Realtime::Connection::MAX_PROTOCOL_MESSAGE_BATCH_SIZE + 1).times.map do
+          messages = (Ably::PubSub::Realtime::Connection::MAX_PROTOCOL_MESSAGE_BATCH_SIZE + 1).times.map do
             { name: 'foo' }
           end
 

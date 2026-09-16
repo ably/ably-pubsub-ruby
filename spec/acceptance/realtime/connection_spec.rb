@@ -2,7 +2,7 @@
 require 'spec_helper'
 require 'ostruct'
 
-describe Ably::Realtime::Connection, :event_machine do
+describe Ably::PubSub::Realtime::Connection, :event_machine do
   let(:connection) { client.connection }
 
   vary_by_protocol do
@@ -129,7 +129,7 @@ describe Ably::Realtime::Connection, :event_machine do
                 let(:token_callback) do
                   lambda do |token_params|
                     auth_requests << Time.now
-                    Ably::Internal.create_rest_client(default_options).auth.request_token(ttl: ttl).token
+                    Ably::Internal.create_http_client(default_options).auth.request_token(ttl: ttl).token
                   end
                 end
                 let(:client_options) { default_options.merge(auth_callback: token_callback, fallback_hosts: []) }
@@ -245,7 +245,7 @@ describe Ably::Realtime::Connection, :event_machine do
                     lambda do |token_params|
                       sleep 2
                       auth_requests << Time.now
-                      Ably::Internal.create_rest_client(default_options).auth.request_token(ttl: ttl).token
+                      Ably::Internal.create_http_client(default_options).auth.request_token(ttl: ttl).token
                     end
                   end
                   let(:client_options)     { default_options.merge(auth_callback: token_callback) }
@@ -299,7 +299,7 @@ describe Ably::Realtime::Connection, :event_machine do
                         "#{app_id}.invalid-token-invalid-token-invalid-token"
                       else
                         @token_issued = true
-                        Ably::Internal.create_rest_client(default_options).auth.request_token(ttl: ttl).token
+                        Ably::Internal.create_http_client(default_options).auth.request_token(ttl: ttl).token
                       end
                     end
                   end
@@ -365,7 +365,7 @@ describe Ably::Realtime::Connection, :event_machine do
 
         context 'with opaque token string that contain an implicit client_id' do
           let(:client_options)   { default_options.merge(token: token_string, key: nil) }
-          let(:rest_auth_client) { Ably::Internal.create_rest_client(default_options.merge(key: api_key)) }
+          let(:rest_auth_client) { Ably::Internal.create_http_client(default_options.merge(key: api_key)) }
           let(:token_string)     { rest_auth_client.auth.request_token(client_id: client_id).token }
 
           context 'string' do
@@ -796,7 +796,7 @@ describe Ably::Realtime::Connection, :event_machine do
       it 'calls the Deferrable callback on success' do
         connection.connect do
           connection.close.callback do
-            expect(connection).to be_a(Ably::Realtime::Connection)
+            expect(connection).to be_a(Ably::PubSub::Realtime::Connection)
             expect(connection.state).to eq(:closed)
             stop_reactor
           end
@@ -1308,8 +1308,8 @@ describe Ably::Realtime::Connection, :event_machine do
 
       context 'with a different default connection_state_ttl' do
         before do
-          old_defaults = Ably::Realtime::Connection::DEFAULTS
-          stub_const 'Ably::Realtime::Connection::DEFAULTS', old_defaults.merge(connection_state_ttl: 15)
+          old_defaults = Ably::PubSub::Realtime::Connection::DEFAULTS
+          stub_const 'Ably::PubSub::Realtime::Connection::DEFAULTS', old_defaults.merge(connection_state_ttl: 15)
         end
 
         it 'updates the private Connection#connection_state_ttl when received from Ably in ConnectionDetails' do
@@ -1805,7 +1805,7 @@ describe Ably::Realtime::Connection, :event_machine do
       context 'ConnectionStateChange object' do
         it 'has current state' do
           connection.on(:connected) do |connection_state_change|
-            expect(connection_state_change.current).to be_a(Ably::Realtime::Connection::STATE)
+            expect(connection_state_change.current).to be_a(Ably::PubSub::Realtime::Connection::STATE)
             expect(connection_state_change.current).to eq(:connected)
             stop_reactor
           end
@@ -1813,7 +1813,7 @@ describe Ably::Realtime::Connection, :event_machine do
 
         it 'has a previous state' do
           connection.on(:connected) do |connection_state_change|
-            expect(connection_state_change.previous).to be_a(Ably::Realtime::Connection::STATE)
+            expect(connection_state_change.previous).to be_a(Ably::PubSub::Realtime::Connection::STATE)
             expect(connection_state_change.previous).to eq(:connecting)
             stop_reactor
           end
@@ -1821,7 +1821,7 @@ describe Ably::Realtime::Connection, :event_machine do
 
         it 'has the event that generated the state change (#TH5)' do
           connection.on(:connected) do |connection_state_change|
-            expect(connection_state_change.event).to be_a(Ably::Realtime::Connection::EVENT)
+            expect(connection_state_change.event).to be_a(Ably::PubSub::Realtime::Connection::EVENT)
             expect(connection_state_change.event).to eq(:connected)
             stop_reactor
           end

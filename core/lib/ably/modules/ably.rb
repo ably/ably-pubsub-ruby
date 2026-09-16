@@ -1,4 +1,4 @@
-# Ably is the base namespace for the Ably {Ably::Realtime Realtime} & {Ably::Rest Rest} client libraries.
+# Ably is the base namespace for the Ably {Ably::PubSub::Realtime Realtime} & {Ably::PubSub::Http Rest} client libraries.
 #
 # Please refer to the {file:README.md Readme} on getting started.
 #

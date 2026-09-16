@@ -2,7 +2,7 @@
 require 'spec_helper'
 require 'shared/client_initializer_behaviour'
 
-describe Ably::Realtime::Client do
+describe Ably::PubSub::Realtime::Client do
   subject(:realtime_client) do
     Ably::Internal.create_realtime_client(client_options)
   end
@@ -13,8 +13,8 @@ describe Ably::Realtime::Client do
     let(:client_options) { { key: 'appid.keyuid:keysecret', auto_connect: false } }
 
     it 'passes on the options to the initializer' do
-      rest_client = instance_double('Ably::Rest::Client', auth: instance_double('Ably::Auth'), options: client_options, environment: 'production', use_tls?: true, custom_tls_port: nil)
-      expect(Ably::Internal).to receive(:create_rest_client).with(hash_including(client_options)).and_return(rest_client)
+      rest_client = instance_double('Ably::PubSub::Http::Client', auth: instance_double('Ably::Auth'), options: client_options, environment: 'production', use_tls?: true, custom_tls_port: nil)
+      expect(Ably::Internal).to receive(:create_http_client).with(hash_including(client_options)).and_return(rest_client)
       realtime_client
     end
 
@@ -49,7 +49,7 @@ describe Ably::Realtime::Client do
     end
 
     specify '#push returns a Push object' do
-      expect(realtime_client.push).to be_a(Ably::Realtime::Push)
+      expect(realtime_client.push).to be_a(Ably::PubSub::Realtime::Push)
     end
   end
 

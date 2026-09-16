@@ -2,37 +2,110 @@
 
 ## Version 1.x (`ably` gem) to 2.0.0 (`ably-pubsub-server` gem)
 
-> **Status: draft.** The final public API naming is still under review; this section will be finalized before the 2.0.0 GA release.
+### Gemfile
 
-Version 2.0.0 splits the SDK into new packages. The `ably` gem is superseded: it receives security and critical-bug fixes only for one year from the 2.0.0 release date, and is then end-of-life. Under MAU-based pricing the platform must classify every connection as device- or server-side; the new packages declare this automatically, while the old constructors cannot — once MAU pricing is live, they raise on MAU-enabled accounts.
+```ruby
+# 1.x
+gem 'ably'
 
-Ruby is a server-side SDK, so there is a single new public gem, `ably-pubsub-server`, whose factory functions are the only entry points: the old constructors raise `Ably::Exceptions::DirectConstructionNotSupported`, because the package a client is created from is what declares its side and a directly constructed client declares none.
+# 2.0
+gem 'ably-pubsub-server'
+```
 
-### Mapping
-
-| 1.x (`ably`) | 2.0 (`ably-pubsub-server`) |
-| --- | --- |
-| `gem 'ably'` | `gem 'ably-pubsub-server'` |
-| `gem 'ably-rest'` (from `ably-ruby-rest`) | `gem 'ably-pubsub-server'` |
-| `require 'ably'` | `require 'ably/pubsub/server'` |
-| `Ably::Rest::Client.new(options)` | `Ably::PubSub::Server.create_http_client(options)` |
-| `Ably::Rest.new(options)` | `Ably::PubSub::Server.create_http_client(options)` |
-| `Ably::Realtime::Client.new(options)` | `Ably::PubSub::Server.create_realtime_client(options)` |
-| `Ably::Realtime.new(options)` | `Ably::PubSub::Server.create_realtime_client(options)` |
-
-### Example
+### Require
 
 ```ruby
 # 1.x
 require 'ably'
-client = Ably::Rest::Client.new(key: ENV['ABLY_API_KEY'])
 
 # 2.0
 require 'ably/pubsub/server'
-client = Ably::PubSub::Server.create_http_client(key: ENV['ABLY_API_KEY'])
 ```
 
-Both factories accept everything the old constructors accepted: an options `Hash`, an API key `String`, or a token `String`.
+### HTTP client
+
+```ruby
+# 1.x
+client = Ably::Rest::Client.new(key: ENV['ABLY_API_KEY'])
+client = Ably::Rest::Client.new('key.id:secret')
+client = Ably::Rest::Client.new(token: 'token')
+client = Ably::Rest.new(key: ENV['ABLY_API_KEY'])
+
+# 2.0
+client = Ably::PubSub::Server.create_http_client(key: ENV['ABLY_API_KEY'])
+client = Ably::PubSub::Server.create_http_client('key.id:secret')
+client = Ably::PubSub::Server.create_http_client(token: 'token')
+```
+
+### Realtime client
+
+```ruby
+# 1.x
+client = Ably::Realtime::Client.new(key: ENV['ABLY_API_KEY'])
+client = Ably::Realtime::Client.new('key.id:secret')
+client = Ably::Realtime.new(key: ENV['ABLY_API_KEY'])
+
+# 2.0
+client = Ably::PubSub::Server.create_realtime_client(key: ENV['ABLY_API_KEY'])
+client = Ably::PubSub::Server.create_realtime_client('key.id:secret')
+```
+
+Both factories accept an options `Hash`, an API key `String`, or a token `String`.
+
+`Ably::PubSub::Http::Client.new` and `Ably::PubSub::Realtime::Client.new` raise
+`Ably::Exceptions::DirectConstructionNotSupported`.
+
+### Namespaces
+
+| 1.x | 2.0 |
+| --- | --- |
+| `Ably::Rest::*` | `Ably::PubSub::Http::*` |
+| `Ably::Realtime::*` | `Ably::PubSub::Realtime::*` |
+
+```ruby
+# 1.x
+client.is_a?(Ably::Rest::Client)
+Ably::Rest::Client::MAX_MESSAGE_SIZE
+Ably::Realtime::Channel::STATE.Attached
+Ably::Realtime::Connection::STATE.Connected
+
+# 2.0
+client.is_a?(Ably::PubSub::Http::Client)
+Ably::PubSub::Http::Client::MAX_MESSAGE_SIZE
+Ably::PubSub::Realtime::Channel::STATE.Attached
+Ably::PubSub::Realtime::Connection::STATE.Connected
+```
+
+`Ably::Rest` and `Ably::Realtime` raise `NameError` in 2.0.
+
+### Unchanged
+
+Everything after construction:
+
+```ruby
+client = Ably::PubSub::Server.create_http_client(key: ENV['ABLY_API_KEY'])
+
+channel = client.channels.get('example')
+channel.publish 'event', 'payload'
+channel.history
+channel.presence.get
+
+client.auth.request_token
+client.stats
+client.time
+```
+
+```ruby
+client = Ably::PubSub::Server.create_realtime_client(key: ENV['ABLY_API_KEY'])
+
+client.connection.on(:connected) { }
+
+channel = client.channels.get('example')
+channel.attach
+channel.subscribe { |message| }
+channel.publish 'event', 'payload'
+channel.presence.enter
+```
 
 ## Version 1.1.8 to 1.2.0
 

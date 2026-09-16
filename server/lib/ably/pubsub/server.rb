@@ -25,20 +25,20 @@ module Ably
       class << self
         # Creates a stateless HTTP (REST) client declaring the server side.
         #
-        # Accepts everything {Ably::Rest::Client#initialize} accepts: an options Hash,
+        # Accepts everything {Ably::PubSub::Http::Client#initialize} accepts: an options Hash,
         # an API key String, or a token String.
         #
-        # @return [Ably::Rest::Client]
+        # @return [Ably::PubSub::Http::Client]
         def create_http_client(options)
-          Ably::Internal.create_rest_client(options_with_side_agent(options))
+          Ably::Internal.create_http_client(options_with_side_agent(options))
         end
 
         # Creates a stateful realtime client declaring the server side.
         #
-        # Accepts everything {Ably::Realtime::Client#initialize} accepts: an options Hash,
+        # Accepts everything {Ably::PubSub::Realtime::Client#initialize} accepts: an options Hash,
         # an API key String, or a token String.
         #
-        # @return [Ably::Realtime::Client]
+        # @return [Ably::PubSub::Realtime::Client]
         def create_realtime_client(options)
           Ably::Internal.create_realtime_client(options_with_side_agent(options))
         end

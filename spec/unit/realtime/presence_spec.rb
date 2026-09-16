@@ -2,11 +2,11 @@
 require 'spec_helper'
 require 'shared/protocol_msgbus_behaviour'
 
-describe Ably::Realtime::Presence do
-  let(:channel) { double('Ably::Realtime::Channel').as_null_object }
+describe Ably::PubSub::Realtime::Presence do
+  let(:channel) { double('Ably::PubSub::Realtime::Channel').as_null_object }
 
   subject do
-    Ably::Realtime::Presence.new(channel)
+    Ably::PubSub::Realtime::Presence.new(channel)
   end
 
   describe 'callbacks' do

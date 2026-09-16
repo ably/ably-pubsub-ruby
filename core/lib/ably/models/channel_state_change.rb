@@ -1,5 +1,5 @@
 module Ably::Models
-  # Contains state change information emitted by {Ably::Rest::Channel} and {Ably::Realtime::Channel} objects.
+  # Contains state change information emitted by {Ably::PubSub::Http::Channel} and {Ably::PubSub::Realtime::Channel} objects.
   #
   class ChannelStateChange
     include Ably::Modules::ModelCommon
@@ -21,31 +21,31 @@ module Ably::Models
       raise ArgumentError, e
     end
 
-    # The new current {Ably::Realtime::Channel::STATE}.
+    # The new current {Ably::PubSub::Realtime::Channel::STATE}.
     #
     # @spec RTL2a, RTL2b
     #
-    # @return [Ably::Realtime::Channel::STATE]
+    # @return [Ably::PubSub::Realtime::Channel::STATE]
     #
     def current
       @hash_object[:current]
     end
 
-    # The previous state. For the {Ably::Realtime::Channel::EVENT}(:update) event, this is equal to the current {Ably::Realtime::Channel::STATE}.
+    # The previous state. For the {Ably::PubSub::Realtime::Channel::EVENT}(:update) event, this is equal to the current {Ably::PubSub::Realtime::Channel::STATE}.
     #
     # @spec RTL2a, RTL2b
     #
-    # @return [Ably::Realtime::Channel::EVENT]
+    # @return [Ably::PubSub::Realtime::Channel::EVENT]
     #
     def previous
       @hash_object[:previous]
     end
 
-    # The event that triggered this {Ably::Realtime::Channel::STATE} change.
+    # The event that triggered this {Ably::PubSub::Realtime::Channel::STATE} change.
     #
     # @spec TH5
     #
-    # @return [Ably::Realtime::Channel::STATE]
+    # @return [Ably::PubSub::Realtime::Channel::STATE]
     #
     def event
       @hash_object[:event]

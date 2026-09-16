@@ -1,5 +1,5 @@
 module Ably::Models
-  # Contains {Ably::Models::ConnectionState} change information emitted by the {Ably::Realtime::Connection} object.
+  # Contains {Ably::Models::ConnectionState} change information emitted by the {Ably::PubSub::Realtime::Connection} object.
   #
   class ConnectionStateChange
     include Ably::Modules::ModelCommon
@@ -21,21 +21,21 @@ module Ably::Models
       raise ArgumentError, e
     end
 
-    # The new {Ably::Realtime::Connection::STATE}.
+    # The new {Ably::PubSub::Realtime::Connection::STATE}.
     #
     # @spec TA2
     #
-    # @return [Ably::Realtime::Connection::STATE]
+    # @return [Ably::PubSub::Realtime::Connection::STATE]
     #
     def current
       @hash_object[:current]
     end
 
-    # The event that triggered this {Ably::Realtime::Connection::EVENT} change.
+    # The event that triggered this {Ably::PubSub::Realtime::Connection::EVENT} change.
     #
     # @spec TA5
     #
-    # @return [Ably::Realtime::Connection::STATE]
+    # @return [Ably::PubSub::Realtime::Connection::STATE]
     #
     def event
       @hash_object[:event]
@@ -46,7 +46,7 @@ module Ably::Models
     #
     # @spec TA2
     #
-    # @return [Ably::Realtime::Connection::STATE]
+    # @return [Ably::PubSub::Realtime::Connection::STATE]
     #
     def previous
       @hash_object[:previous]

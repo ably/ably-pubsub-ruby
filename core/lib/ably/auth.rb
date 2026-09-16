@@ -2,7 +2,7 @@ require 'json'
 require 'faraday'
 require 'securerandom'
 
-require 'ably/rest/middleware/external_exceptions'
+require 'ably/pubsub/http/middleware/external_exceptions'
 
 module Ably
   # Creates Ably {Ably::Models::TokenRequest} objects and obtains Ably Tokens from Ably to subsequently issue to less trusted clients.
@@ -45,7 +45,7 @@ module Ably
 
     # Creates an Auth object
     #
-    # @param [Ably::Rest::Client] client  {Ably::Rest::Client} this Auth object uses
+    # @param [Ably::PubSub::Http::Client] client  {Ably::PubSub::Http::Client} this Auth object uses
     # @param [Hash] token_params the token params used as a default for future token requests
     # @param [Hash] auth_options the authentication options used as a default future token requests
     # @option (see #request_token)
@@ -759,7 +759,7 @@ module Ably
         setup_outgoing_middleware builder
 
         # Raise exceptions if response code is invalid
-        builder.use Ably::Rest::Middleware::ExternalExceptions
+        builder.use Ably::PubSub::Http::Middleware::ExternalExceptions
 
         setup_incoming_middleware builder, logger
 

@@ -14,7 +14,7 @@ module Ably::Models
     end
   end
 
-  # Contains the metrics of a {Ably::Models::Rest::Channel} or {Ably::Models::Realtime::Channel} object.
+  # Contains the metrics of a {Ably::PubSub::Http::Channel} or {Ably::PubSub::Realtime::Channel} object.
   #
   # @spec CHO1
   #

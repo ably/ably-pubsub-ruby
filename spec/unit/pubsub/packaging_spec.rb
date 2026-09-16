@@ -2,8 +2,10 @@
 require 'spec_helper'
 
 # The Ably namespace is assembled at install time from two gems: ably-pubsub-core ships the
-# implementation under lib/ably, and ably-pubsub-server ships only the lib/ably/pubsub/server
-# subtree on top of it. That only holds together if each gem ships exactly its own subtree —
+# implementation under lib/ably — including lib/ably/pubsub/http and lib/ably/pubsub/realtime —
+# and ably-pubsub-server ships only the lib/ably/pubsub/server subtree on top of it. Both gems
+# therefore write into lib/ably/pubsub, which makes the no-overlap rule below load-bearing
+# rather than incidental. That only holds together if each gem ships exactly its own subtree —
 # a file shipped by both would be resolved from whichever gem comes first on the load path,
 # hiding the other's copy. The release pre-flight checks version agreement but nothing else
 # asserts the gems' file lists, so a packaging mistake would otherwise surface only after
@@ -26,7 +28,15 @@ describe 'Pub/Sub gem packaging' do
   end
 
   it 'core does not ship the server subtree' do
-    expect(core_spec.files.grep(%r{\Alib/ably/pubsub(/|\.rb\z)})).to be_empty
+    expect(core_spec.files.grep(%r{\Alib/ably/pubsub/server(/|\.rb\z)})).to be_empty
+  end
+
+  # Core owns everything under lib/ably/pubsub except the server subtree, so it must
+  # not claim the bare namespace paths the server gem would otherwise be free to add.
+  it 'core ships its own pubsub subtrees' do
+    expect(core_spec.files).to include('lib/ably/pubsub.rb')
+    expect(core_spec.files.grep(%r{\Alib/ably/pubsub/http/})).to_not be_empty
+    expect(core_spec.files.grep(%r{\Alib/ably/pubsub/realtime/})).to_not be_empty
   end
 
   it 'server ships only the lib/ably/pubsub/server subtree under lib' do

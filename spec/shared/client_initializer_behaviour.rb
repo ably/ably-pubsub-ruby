@@ -18,7 +18,7 @@ shared_examples 'a client initializer' do
   end
 
   def rest?
-    subject.kind_of?(Ably::Rest::Client)
+    subject.kind_of?(Ably::PubSub::Http::Client)
   end
 
   context 'with invalid arguments' do

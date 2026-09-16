@@ -25,7 +25,7 @@ module Ably::Models
     include Ably::Modules::Conversions
     include Ably::Modules::Encodeable
     include Ably::Modules::ModelCommon
-    include Ably::Modules::SafeDeferrable if defined?(Ably::Realtime)
+    include Ably::Modules::SafeDeferrable if defined?(Ably::PubSub::Realtime)
 
     # Statically register a default set of encoders for this class
     Ably::Models::MessageEncoders.register_default_encoders self

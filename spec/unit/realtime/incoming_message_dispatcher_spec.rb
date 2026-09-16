@@ -1,17 +1,17 @@
 require 'spec_helper'
 
-describe Ably::Realtime::Client::IncomingMessageDispatcher, :api_private do
+describe Ably::PubSub::Realtime::Client::IncomingMessageDispatcher, :api_private do
   let(:msgbus) do
     Ably::Util::PubSub.new
   end
   let(:connection) do
-    instance_double('Ably::Realtime::Connection', __incoming_protocol_msgbus__: msgbus, configure_new: true, id: nil, set_connection_confirmed_alive: nil)
+    instance_double('Ably::PubSub::Realtime::Connection', __incoming_protocol_msgbus__: msgbus, configure_new: true, id: nil, set_connection_confirmed_alive: nil)
   end
   let(:client) do
-    instance_double('Ably::Realtime::Client', channels: {})
+    instance_double('Ably::PubSub::Realtime::Client', channels: {})
   end
 
-  subject { Ably::Realtime::Client::IncomingMessageDispatcher.new(client, connection) }
+  subject { Ably::PubSub::Realtime::Client::IncomingMessageDispatcher.new(client, connection) }
 
   context '#initialize' do
     it 'should subscribe to protocol messages from the connection' do

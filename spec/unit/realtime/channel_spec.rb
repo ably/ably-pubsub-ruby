@@ -2,12 +2,12 @@
 require 'spec_helper'
 require 'shared/protocol_msgbus_behaviour'
 
-describe Ably::Realtime::Channel do
+describe Ably::PubSub::Realtime::Channel do
   let(:client)       { Ably::Internal.create_realtime_client(token: 'valid') }
   let(:channel_name) { 'test' }
 
   subject do
-    Ably::Realtime::Channel.new(client, channel_name)
+    Ably::PubSub::Realtime::Channel.new(client, channel_name)
   end
 
   describe '#initializer' do

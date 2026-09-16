@@ -1,11 +1,11 @@
 require 'spec_helper'
 require 'shared/protocol_msgbus_behaviour'
 
-describe Ably::Realtime::Connection do
-  let(:client) { instance_double('Ably::Realtime::Client', logger: double('logger').as_null_object, recover: nil, endpoint: double('endpoint', host: 'realtime.ably.io')) }
+describe Ably::PubSub::Realtime::Connection do
+  let(:client) { instance_double('Ably::PubSub::Realtime::Client', logger: double('logger').as_null_object, recover: nil, endpoint: double('endpoint', host: 'realtime.ably.io')) }
 
   subject do
-    Ably::Realtime::Connection.new(client, {}).tap do |connection|
+    Ably::PubSub::Realtime::Connection.new(client, {}).tap do |connection|
       connection.__incoming_protocol_msgbus__.unsubscribe
       connection.__outgoing_protocol_msgbus__.unsubscribe
     end
