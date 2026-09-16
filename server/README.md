@@ -14,7 +14,7 @@ gem 'ably-pubsub-server'
 ## Usage
 
 The factory functions are the only entry points. The client classes refuse direct
-construction — `Ably::Rest::Client.new` and `Ably::Realtime::Client.new` raise
+construction — `Ably::PubSub::Http::Client.new` and `Ably::PubSub::Realtime::Client.new` raise
 `Ably::Exceptions::DirectConstructionNotSupported` — because the package a client is
 created from is what declares its side, and a directly constructed client declares none.
 

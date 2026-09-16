@@ -2,12 +2,12 @@ require 'base64'
 
 require 'ably/version'
 
-require 'ably/rest/middleware/encoder'
-require 'ably/rest/middleware/external_exceptions'
-require 'ably/rest/middleware/fail_if_unsupported_mime_type'
-require 'ably/rest/middleware/logger'
-require 'ably/rest/middleware/parse_json'
-require 'ably/rest/middleware/parse_message_pack'
+require 'ably/pubsub/http/middleware/encoder'
+require 'ably/pubsub/http/middleware/external_exceptions'
+require 'ably/pubsub/http/middleware/fail_if_unsupported_mime_type'
+require 'ably/pubsub/http/middleware/logger'
+require 'ably/pubsub/http/middleware/parse_json'
+require 'ably/pubsub/http/middleware/parse_message_pack'
 
 module Ably::Modules
   # HttpHelpers provides common private methods to classes to simplify HTTP interactions with Ably
@@ -23,19 +23,19 @@ module Ably::Modules
 
     def setup_outgoing_middleware(builder)
       # Convert request params to "www-form-urlencoded"
-      builder.use Ably::Rest::Middleware::Encoder
+      builder.use Ably::PubSub::Http::Middleware::Encoder
     end
 
     def setup_incoming_middleware(builder, logger, options = {})
-      builder.use Ably::Rest::Middleware::Logger, logger
+      builder.use Ably::PubSub::Http::Middleware::Logger, logger
 
       # Parse JSON / MsgPack response bodies. ParseJson must be first (default) parsing middleware
       if options[:fail_if_unsupported_mime_type] == true
-        builder.use Ably::Rest::Middleware::FailIfUnsupportedMimeType
+        builder.use Ably::PubSub::Http::Middleware::FailIfUnsupportedMimeType
       end
 
-      builder.use Ably::Rest::Middleware::ParseJson
-      builder.use Ably::Rest::Middleware::ParseMessagePack
+      builder.use Ably::PubSub::Http::Middleware::ParseJson
+      builder.use Ably::PubSub::Http::Middleware::ParseMessagePack
     end
   end
 end

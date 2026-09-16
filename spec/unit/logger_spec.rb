@@ -2,7 +2,7 @@ require 'spec_helper'
 
 describe Ably::Logger, :prevent_log_stubbing do
   let(:rest_client) do
-    instance_double('Ably::Rest::Client')
+    instance_double('Ably::PubSub::Http::Client')
   end
 
   subject { Ably::Logger.new(rest_client, Logger::INFO) }
@@ -41,17 +41,17 @@ describe Ably::Logger, :prevent_log_stubbing do
         end
       end
 
-      if defined?(Ably::Realtime)
+      if defined?(Ably::PubSub::Realtime)
         context 'with Realtime client' do
           let(:new_realtime_client) do
-            instance_double('Ably::Realtime::Client', connection: instance_double('Ably::Realtime::Connection', id: nil))
+            instance_double('Ably::PubSub::Realtime::Client', connection: instance_double('Ably::PubSub::Realtime::Connection', id: nil))
           end
           let(:connected_realtime_client) do
-            instance_double('Ably::Realtime::Client', connection: instance_double('Ably::Realtime::Connection', id: '0000'))
+            instance_double('Ably::PubSub::Realtime::Client', connection: instance_double('Ably::PubSub::Realtime::Connection', id: '0000'))
           end
           before do
-            allow(new_realtime_client).to receive(:kind_of?).with(Ably::Realtime::Client).and_return(true)
-            allow(connected_realtime_client).to receive(:kind_of?).with(Ably::Realtime::Client).and_return(true)
+            allow(new_realtime_client).to receive(:kind_of?).with(Ably::PubSub::Realtime::Client).and_return(true)
+            allow(connected_realtime_client).to receive(:kind_of?).with(Ably::PubSub::Realtime::Client).and_return(true)
           end
 
           context 'with Realtime disconnected client' do

@@ -4,7 +4,7 @@ require 'base64'
 require 'json'
 require 'securerandom'
 
-describe 'Ably::Realtime::Channel Message', :event_machine do
+describe 'Ably::PubSub::Realtime::Channel Message', :event_machine do
   vary_by_protocol do
     let(:default_options) { options.merge(key: api_key, environment: environment, protocol: protocol) }
     let(:client_options)  { default_options }
@@ -298,7 +298,7 @@ describe 'Ably::Realtime::Channel Message', :event_machine do
         let(:no_echo_channel) { no_echo_client.channel(channel_name) }
 
         let(:rest_client) do
-          Ably::Internal.create_rest_client(default_options)
+          Ably::Internal.create_http_client(default_options)
         end
 
         it 'will not echo messages to the client but will still broadcast messages to other connected clients', em_timeout: 10 do
@@ -830,7 +830,7 @@ describe 'Ably::Realtime::Channel Message', :event_machine do
         auto_close Ably::Internal.create_realtime_client(client_options)
       end
       let(:rest_client) do
-        Ably::Internal.create_rest_client(client_options)
+        Ably::Internal.create_http_client(client_options)
       end
       let(:realtime_channel) { realtime_client.channels.get(channel_name) }
 
@@ -881,7 +881,7 @@ describe 'Ably::Realtime::Channel Message', :event_machine do
       JSON.parse(File.read(fixtures_path))['messages'].each do |encoding_spec|
         context "when publishing a #{encoding_spec['expectedType']} using JSON protocol" do
           let(:rest_publish_client) do
-            Ably::Internal.create_rest_client(client_options.merge(protocol: :json))
+            Ably::Internal.create_http_client(client_options.merge(protocol: :json))
           end
           let(:realtime_subscribe_client) do
             Ably::Internal.create_realtime_client(client_options.merge(protocol: :msgpack))
@@ -909,10 +909,10 @@ describe 'Ably::Realtime::Channel Message', :event_machine do
 
         context "when retrieving a #{encoding_spec['expectedType']} using JSON protocol" do
           let(:rest_publish_client) do
-            Ably::Internal.create_rest_client(client_options.merge(protocol: :msgpack))
+            Ably::Internal.create_http_client(client_options.merge(protocol: :msgpack))
           end
           let(:rest_retrieve_client) do
-            Ably::Internal.create_rest_client(client_options.merge(protocol: :json))
+            Ably::Internal.create_http_client(client_options.merge(protocol: :json))
           end
           let(:rest_publish_channel) { rest_publish_client.channels.get(channel_name) }
 

@@ -24,7 +24,7 @@ module Ably::Models
     include Ably::Modules::Conversions
     include Ably::Modules::Encodeable
     include Ably::Modules::ModelCommon
-    include Ably::Modules::SafeDeferrable if defined?(Ably::Realtime)
+    include Ably::Modules::SafeDeferrable if defined?(Ably::PubSub::Realtime)
     extend Ably::Modules::Enum
 
     # Describes the possible actions members in the presence set can emit.

@@ -1,7 +1,7 @@
 # encoding: utf-8
 require 'spec_helper'
 
-describe Ably::Realtime::Connection, 'failures', :event_machine do
+describe Ably::PubSub::Realtime::Connection, 'failures', :event_machine do
   let(:connection) { client.connection }
 
   vary_by_protocol do
@@ -14,7 +14,7 @@ describe Ably::Realtime::Connection, 'failures', :event_machine do
       auto_close Ably::Internal.create_realtime_client(client_options)
     end
     let(:rest_client) do
-      Ably::Internal.create_rest_client(default_options)
+      Ably::Internal.create_http_client(default_options)
     end
 
     context 'authentication failure' do
@@ -111,7 +111,7 @@ describe Ably::Realtime::Connection, 'failures', :event_machine do
             end
           end
 
-          context 'request fails due to slow response and subsequent timeout', :webmock, em_timeout: (Ably::Rest::Client::HTTP_DEFAULTS.fetch(:request_timeout) + 5) * 2 do
+          context 'request fails due to slow response and subsequent timeout', :webmock, em_timeout: (Ably::PubSub::Http::Client::HTTP_DEFAULTS.fetch(:request_timeout) + 5) * 2 do
             let(:auth_url) { "http://#{random_str}.domain.will.be.stubbed/path" }
             let(:client_options) { default_options.reject { |k, v| k == :key }.merge(auth_url: auth_url, log_level: :fatal) }
 
@@ -119,7 +119,7 @@ describe Ably::Realtime::Connection, 'failures', :event_machine do
             before do
               stub_request(:get, auth_url).
                 to_return do |request|
-                  sleep Ably::Rest::Client::HTTP_DEFAULTS.fetch(:request_timeout) + 5
+                  sleep Ably::PubSub::Http::Client::HTTP_DEFAULTS.fetch(:request_timeout) + 5
                   { status: [500, "Internal Server Error"] }
                 end
             end
@@ -151,12 +151,12 @@ describe Ably::Realtime::Connection, 'failures', :event_machine do
 
             # Timeout +5 seconds, beyond default allowed timeout
             before do
-              token_response = Ably::Internal.create_rest_client(default_options).auth.request_token
+              token_response = Ably::Internal.create_http_client(default_options).auth.request_token
               WebMock.enable!
 
               stub_request(:get, auth_url).
                 to_return do |request|
-                sleep Ably::Rest::Client::HTTP_DEFAULTS.fetch(:request_timeout)
+                sleep Ably::PubSub::Http::Client::HTTP_DEFAULTS.fetch(:request_timeout)
                 { status: [500, "Internal Server Error"] }
               end.then.
               to_return(:status => 201, :body => token_response.to_json, :headers => { 'Content-Type' => 'application/json' })
@@ -860,7 +860,7 @@ describe Ably::Realtime::Connection, 'failures', :event_machine do
             )
           end
 
-          it "retries every #{Ably::Realtime::Connection::DEFAULTS.fetch(:disconnected_retry_timeout)} seconds" do
+          it "retries every #{Ably::PubSub::Realtime::Connection::DEFAULTS.fetch(:disconnected_retry_timeout)} seconds" do
             fail_if_suspended_or_failed
 
             stubbed_first_attempt = false
@@ -930,7 +930,7 @@ describe Ably::Realtime::Connection, 'failures', :event_machine do
                   original_method.call(*args, &block)
                 end
                 connection.once(:connected) do
-                  host = "#{"#{environment}-" if environment && environment.to_s != 'production'}#{Ably::Realtime::Client::DOMAIN}"
+                  host = "#{"#{environment}-" if environment && environment.to_s != 'production'}#{Ably::PubSub::Realtime::Client::DOMAIN}"
                   expect(hosts.first).to eql(host)
                   expect(hosts.length).to eql(1)
                   stop_reactor
@@ -969,7 +969,7 @@ describe Ably::Realtime::Connection, 'failures', :event_machine do
               end
               # Create a new message dispatcher that subscribes to ProtocolMessages after the previous subscription allowing us
               # to modify the ProtocolMessage
-              Ably::Realtime::Client::IncomingMessageDispatcher.new(client, connection)
+              Ably::PubSub::Realtime::Client::IncomingMessageDispatcher.new(client, connection)
             end
 
             connection.once(:connected) do |connection_state_change|
@@ -1470,7 +1470,7 @@ describe Ably::Realtime::Connection, 'failures', :event_machine do
 
       context 'with non-production environment' do
         let(:environment)    { 'sandbox' }
-        let(:expected_host)  { "#{environment}-#{Ably::Realtime::Client::DOMAIN}" }
+        let(:expected_host)  { "#{environment}-#{Ably::PubSub::Realtime::Client::DOMAIN}" }
         let(:client_options) { timeout_options.merge(environment: environment) }
 
         context ':fallback_hosts_use_default is unset' do
@@ -1568,7 +1568,7 @@ describe Ably::Realtime::Connection, 'failures', :event_machine do
           stub_const 'Ably::FALLBACK_HOSTS', custom_hosts
         end
 
-        let(:expected_host)  { Ably::Realtime::Client::DOMAIN }
+        let(:expected_host)  { Ably::PubSub::Realtime::Client::DOMAIN }
         let(:client_options) { timeout_options.merge(environment: nil) }
 
         let(:fallback_hosts_used) { Array.new }

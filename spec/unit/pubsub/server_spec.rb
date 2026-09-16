@@ -23,7 +23,7 @@ describe Ably::PubSub::Server do
     subject(:client) { Ably::PubSub::Server.create_http_client(api_key) }
 
     it 'returns an HTTP (REST) client' do
-      expect(client).to be_a(Ably::Rest::Client)
+      expect(client).to be_a(Ably::PubSub::Http::Client)
     end
 
     it 'appends the side-declaring agent entry to the base agent, versionless' do
@@ -82,11 +82,11 @@ describe Ably::PubSub::Server do
     subject(:client) { Ably::PubSub::Server.create_realtime_client(auto_connect: false, key: api_key) }
 
     it 'returns a realtime client' do
-      expect(client).to be_a(Ably::Realtime::Client)
+      expect(client).to be_a(Ably::PubSub::Realtime::Client)
     end
 
     it 'appends the side-declaring agent entry sent as the realtime agent connection param' do
-      # Ably::Realtime::Connection sends client.rest_client.agent as the `agent` param
+      # Ably::PubSub::Realtime::Connection sends client.rest_client.agent as the `agent` param
       expect(client.rest_client.agent).to eql("#{Ably::AGENT} #{side_entry}")
     end
 

@@ -6,7 +6,7 @@ describe Ably::Models::MessageEncoders::Utf8 do
   let(:string_ascii)        { 'string'.encode(Encoding::ASCII_8BIT) }
   let(:string_utf8)         { 'string'.encode(Encoding::UTF_8) }
 
-  let(:client)              { instance_double('Ably::Realtime::Client') }
+  let(:client)              { instance_double('Ably::PubSub::Realtime::Client') }
 
   subject { Ably::Models::MessageEncoders::Utf8.new(client) }
 

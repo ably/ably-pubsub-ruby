@@ -36,7 +36,7 @@ module Ably::Models
   class ProtocolMessage
     include Ably::Modules::ModelCommon
     include Ably::Modules::Encodeable
-    include Ably::Modules::SafeDeferrable if defined?(Ably::Realtime)
+    include Ably::Modules::SafeDeferrable if defined?(Ably::PubSub::Realtime)
     extend Ably::Modules::Enum
 
     # Actions which are sent by the Ably Realtime API
