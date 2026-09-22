@@ -14,7 +14,7 @@ module Ably::Models
     end
   end
 
-  # Contains the details of a {Ably::Models::Rest::Channel} or {Ably::Models::Realtime::Channel} object
+  # Contains the details of a {Ably::PubSub::Http::Channel} or {Ably::PubSub::Realtime::Channel} object
   # such as its ID and {Ably::Models::ChannelStatus}.
   #
   class ChannelDetails

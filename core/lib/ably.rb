@@ -10,10 +10,11 @@ require 'ably/agent'
 end
 
 require 'ably/auth'
+require 'ably/pubsub'
 require 'ably/exceptions'
 require 'ably/logger'
-require 'ably/realtime'
-require 'ably/rest'
+require 'ably/pubsub/realtime'
+require 'ably/pubsub/http'
 
 # Requires the client classes above: it constructs them.
 require 'ably/internal'

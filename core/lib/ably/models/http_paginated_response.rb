@@ -1,13 +1,13 @@
 require 'ably/models/paginated_result'
 
 module Ably::Models
-  # HTTP respones object from Rest#request object
+  # HTTP response object from Ably::PubSub::Http::Client#request
   # Wraps any Ably HTTP response that supports paging and provides methods to iterate through
   # the pages using {#first}, {#next}, {#has_next?} and {#last?}
 
   class HttpPaginatedResponse < PaginatedResult
     # Retrieve the first page of results.
-    # When used as part of the {Ably::Realtime} library, it will return a {Ably::Util::SafeDeferrable} object,
+    # When used as part of the {Ably::PubSub::Realtime} library, it will return a {Ably::Util::SafeDeferrable} object,
     #   and allows an optional success callback block to be provided.
     #
     # @return [HttpPaginatedResponse,Ably::Util::SafeDeferrable]
@@ -20,7 +20,7 @@ module Ably::Models
     end
 
     # Retrieve the next page of results.
-    # When used as part of the {Ably::Realtime} library, it will return a {Ably::Util::SafeDeferrable} object,
+    # When used as part of the {Ably::PubSub::Realtime} library, it will return a {Ably::Util::SafeDeferrable} object,
     #   and allows an optional success callback block to be provided.
     #
     # @return [HttpPaginatedResponse,Ably::Util::SafeDeferrable]

@@ -13,7 +13,7 @@ describe Ably::Models::MessageEncoders::Cipher do
   let(:binary_data)         { MessagePack.pack(decoded_data) }
   let(:binary_cipher_data)  { crypto.encrypt(binary_data) }
 
-  let(:client)              { instance_double('Ably::Realtime::Client') }
+  let(:client)              { instance_double('Ably::PubSub::Realtime::Client') }
 
   subject { Ably::Models::MessageEncoders::Cipher.new(client) }
 

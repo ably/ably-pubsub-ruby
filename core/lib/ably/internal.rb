@@ -6,36 +6,36 @@ module Ably
   # change in any release, including a patch. Use the factory functions of the package you
   # installed — see {Ably::PubSub::Server} in the +ably-pubsub-server+ gem.
   #
-  # The client classes refuse direct construction ({Ably::Rest::Client.new} and
-  # {Ably::Realtime::Client.new} raise {Ably::Exceptions::DirectConstructionNotSupported}),
+  # The client classes refuse direct construction ({Ably::PubSub::Http::Client.new} and
+  # {Ably::PubSub::Realtime::Client.new} raise {Ably::Exceptions::DirectConstructionNotSupported}),
   # because the package a client is created from is what declares the client's side to the
   # platform and a directly constructed client declares none. These entry points are how a
   # per-side package constructs the client it has stamped its side onto.
   module Internal
     class << self
-      # Constructs an {Ably::Rest::Client}, bypassing the direct-construction refusal.
+      # Constructs an {Ably::PubSub::Http::Client}, bypassing the direct-construction refusal.
       #
-      # @param options [Hash, String] as accepted by {Ably::Rest::Client#initialize}
-      # @return [Ably::Rest::Client]
+      # @param options [Hash, String] as accepted by {Ably::PubSub::Http::Client#initialize}
+      # @return [Ably::PubSub::Http::Client]
       # @api private
-      def create_rest_client(options)
-        construct(Ably::Rest::Client, options)
+      def create_http_client(options)
+        construct(Ably::PubSub::Http::Client, options)
       end
 
-      # Constructs an {Ably::Realtime::Client}, bypassing the direct-construction refusal.
+      # Constructs an {Ably::PubSub::Realtime::Client}, bypassing the direct-construction refusal.
       #
-      # @param options [Hash, String] as accepted by {Ably::Realtime::Client#initialize}
-      # @return [Ably::Realtime::Client]
+      # @param options [Hash, String] as accepted by {Ably::PubSub::Realtime::Client#initialize}
+      # @return [Ably::PubSub::Realtime::Client]
       # @api private
       def create_realtime_client(options)
-        construct(Ably::Realtime::Client, options)
+        construct(Ably::PubSub::Realtime::Client, options)
       end
 
       # Builds the error raised when a client is constructed directly. Shared so the
-      # refusals on the client classes and on the Ably::Rest / Ably::Realtime convenience
-      # aliases all speak with one voice.
+      # refusals on the client classes and on the Ably::PubSub::Http /
+      # Ably::PubSub::Realtime convenience aliases all speak with one voice.
       #
-      # @param subject [String] the unsupported call, e.g. +"Ably::Rest::Client.new"+
+      # @param subject [String] the unsupported call, e.g. +"Ably::PubSub::Http::Client.new"+
       # @param factory [String] the supported call to use instead
       # @return [Ably::Exceptions::DirectConstructionNotSupported]
       # @api private

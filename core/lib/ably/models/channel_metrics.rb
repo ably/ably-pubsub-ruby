@@ -14,7 +14,7 @@ module Ably::Models
     end
   end
 
-  # Contains the metrics associated with a {Ably::Models::Rest::Channel} or {Ably::Models::Realtime::Channel},
+  # Contains the metrics associated with a {Ably::PubSub::Http::Channel} or {Ably::PubSub::Realtime::Channel},
   # such as the number of publishers, subscribers and connections it has.
   #
   # @spec CHM1

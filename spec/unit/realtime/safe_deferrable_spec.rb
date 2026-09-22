@@ -1,7 +1,7 @@
 # encoding: utf-8
 require 'spec_helper'
 require 'shared/safe_deferrable_behaviour'
-require 'ably/realtime'
+require 'ably/pubsub/realtime'
 
 [Ably::Models::ProtocolMessage, Ably::Models::Message, Ably::Models::PresenceMessage].each do |model_klass|
   describe model_klass do

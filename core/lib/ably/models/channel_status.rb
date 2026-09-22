@@ -14,7 +14,7 @@ module Ably::Models
     end
   end
 
-  # Contains the status of a {Ably::Models::Rest::Channel} or {Ably::Models::Realtime::Channel} object
+  # Contains the status of a {Ably::PubSub::Http::Channel} or {Ably::PubSub::Realtime::Channel} object
   # such as whether it is active and its {Ably::Models::ChannelOccupancy}.
   #
   # @spec CHS1
