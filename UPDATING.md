@@ -1,5 +1,131 @@
 # Upgrade / Migration Guide
 
+## Version 1.x (`ably` gem) to 2.0.0 (`ably-pubsub-server` gem)
+
+### Gemfile
+
+```ruby
+# 1.x
+gem 'ably'
+
+# 2.0
+gem 'ably-pubsub-server'
+```
+
+### Require
+
+```ruby
+# 1.x
+require 'ably'
+
+# 2.0
+require 'ably/pubsub/server'
+```
+
+### HTTP client
+
+```ruby
+# 1.x
+client = Ably::Rest::Client.new(key: ENV['ABLY_API_KEY'])
+client = Ably::Rest::Client.new('key.id:secret')
+client = Ably::Rest::Client.new(token: 'token')
+client = Ably::Rest.new(key: ENV['ABLY_API_KEY'])
+
+# 2.0
+client = Ably::PubSub::Server.create_http_client(key: ENV['ABLY_API_KEY'])
+client = Ably::PubSub::Server.create_http_client('key.id:secret')
+client = Ably::PubSub::Server.create_http_client(token: 'token')
+```
+
+### Realtime client
+
+```ruby
+# 1.x
+client = Ably::Realtime::Client.new(key: ENV['ABLY_API_KEY'])
+client = Ably::Realtime::Client.new('key.id:secret')
+client = Ably::Realtime.new(key: ENV['ABLY_API_KEY'])
+
+# 2.0
+client = Ably::PubSub::Server.create_realtime_client(key: ENV['ABLY_API_KEY'])
+client = Ably::PubSub::Server.create_realtime_client('key.id:secret')
+```
+
+Both factories accept an options `Hash`, an API key `String`, or a token `String`.
+
+`Ably::PubSub::Http::Client.new` and `Ably::PubSub::Realtime::Client.new` raise
+`Ably::Exceptions::DirectConstructionNotSupported`.
+
+### Namespaces
+
+| 1.x | 2.0 |
+| --- | --- |
+| `Ably::Rest::*` | `Ably::PubSub::Http::*` |
+| `Ably::Realtime::*` | `Ably::PubSub::Realtime::*` |
+
+```ruby
+# 1.x
+client.is_a?(Ably::Rest::Client)
+Ably::Rest::Client::MAX_MESSAGE_SIZE
+Ably::Realtime::Channel::STATE.Attached
+Ably::Realtime::Connection::STATE.Connected
+
+# 2.0
+client.is_a?(Ably::PubSub::Http::Client)
+Ably::PubSub::Http::Client::MAX_MESSAGE_SIZE
+Ably::PubSub::Realtime::Channel::STATE.Attached
+Ably::PubSub::Realtime::Connection::STATE.Connected
+```
+
+`Ably::Rest` and `Ably::Realtime` raise `NameError` in 2.0.
+
+### Releasing realtime channels
+
+In 1.x, `Channels#release` detached a realtime channel before removing it. In 2.0, a realtime channel can only be released
+when it is in the `initialized`, `detached` or `failed` state. Releasing it in any other state raises
+`Ably::Exceptions::InvalidState` with code `90011`, and the channel is left in place. Detach the channel and wait for the
+detach to complete before releasing it:
+
+```ruby
+# 1.x
+client.channels.release('example')
+
+# 2.0
+client.channels.get('example').detach do
+  client.channels.release('example')
+end
+```
+
+`Ably::PubSub::Http::Channels#release` is unchanged.
+
+### Unchanged
+
+Everything after construction:
+
+```ruby
+client = Ably::PubSub::Server.create_http_client(key: ENV['ABLY_API_KEY'])
+
+channel = client.channels.get('example')
+channel.publish 'event', 'payload'
+channel.history
+channel.presence.get
+
+client.auth.request_token
+client.stats
+client.time
+```
+
+```ruby
+client = Ably::PubSub::Server.create_realtime_client(key: ENV['ABLY_API_KEY'])
+
+client.connection.on(:connected) { }
+
+channel = client.channels.get('example')
+channel.attach
+channel.subscribe { |message| }
+channel.publish 'event', 'payload'
+channel.presence.enter
+```
+
 ## Version 1.1.8 to 1.2.0
 
 ### Notable Changes

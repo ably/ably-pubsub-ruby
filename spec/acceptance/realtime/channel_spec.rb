@@ -1,19 +1,19 @@
 # encoding: utf-8
 require 'spec_helper'
 
-describe Ably::Realtime::Channel, :event_machine do
+describe Ably::PubSub::Realtime::Channel, :event_machine do
   vary_by_protocol do
     let(:default_options) { { key: api_key, environment: environment, protocol: protocol } }
     let(:client_options)  { default_options }
 
-    let(:client)       { auto_close Ably::Realtime::Client.new(client_options) }
+    let(:client)       { auto_close Ably::Internal.create_realtime_client(client_options) }
     let(:connection)   { client.connection }
     let(:channel_name) { random_str }
     let(:payload)      { random_str }
     let(:channel)      { client.channel(channel_name) }
     let(:messages)     { [] }
 
-    let(:sub_client)   { auto_close Ably::Realtime::Client.new(client_options) }
+    let(:sub_client)   { auto_close Ably::Internal.create_realtime_client(client_options) }
     let(:sub_channel)  { sub_client.channel(channel_name) }
 
     def disconnect_transport
@@ -23,7 +23,7 @@ describe Ably::Realtime::Channel, :event_machine do
     describe 'initialization' do
       context 'with :auto_connect option set to false on connection' do
         let(:client) do
-          auto_close Ably::Realtime::Client.new(default_options.merge(auto_connect: false))
+          auto_close Ably::Internal.create_realtime_client(default_options.merge(auto_connect: false))
         end
 
         it 'remains initialized when accessing a channel' do
@@ -244,7 +244,7 @@ describe Ably::Realtime::Channel, :event_machine do
 
       it 'calls the SafeDeferrable callback on success (#RTL4d)' do
         channel.attach.callback do
-          expect(channel).to be_a(Ably::Realtime::Channel)
+          expect(channel).to be_a(Ably::PubSub::Realtime::Channel)
           expect(channel.state).to eq(:attached)
           stop_reactor
         end
@@ -358,7 +358,7 @@ describe Ably::Realtime::Channel, :event_machine do
 
         it 'attaches all channels', em_timeout: 15 do
           connection_count.times.map do
-            auto_close Ably::Realtime::Client.new(default_options)
+            auto_close Ably::Internal.create_realtime_client(default_options)
           end.each do |client|
             channel_count.times.map do |index|
               client.channel("channel-#{index}").attach do
@@ -383,7 +383,7 @@ describe Ably::Realtime::Channel, :event_machine do
           )
         end
         let(:restricted_client) do
-          auto_close Ably::Realtime::Client.new(auth_options)
+          auto_close Ably::Internal.create_realtime_client(auth_options)
         end
         let(:restricted_channel) { restricted_client.channel("cansubscribe:foo") }
 
@@ -583,7 +583,7 @@ describe Ably::Realtime::Channel, :event_machine do
         it 'calls the Deferrable callback on success' do
           channel.once :attached do
             channel.detach.callback do
-              expect(channel).to be_a(Ably::Realtime::Channel)
+              expect(channel).to be_a(Ably::PubSub::Realtime::Channel)
               expect(channel.state).to eq(:detached)
               stop_reactor
             end
@@ -1377,7 +1377,7 @@ describe Ably::Realtime::Channel, :event_machine do
         end
 
         context 'with two invalid message out of 12' do
-          let(:rest_client)    { Ably::Rest::Client.new(default_options.merge(client_id: 'valid')) }
+          let(:rest_client)    { Ably::Internal.create_http_client(default_options.merge(client_id: 'valid')) }
 
           let(:invalid_messages) do
             2.times.map do |index|
@@ -1416,7 +1416,7 @@ describe Ably::Realtime::Channel, :event_machine do
         end
 
         context 'only invalid messages' do
-          let(:rest_client)    { Ably::Rest::Client.new(default_options.merge(client_id: 'valid')) }
+          let(:rest_client)    { Ably::Internal.create_http_client(default_options.merge(client_id: 'valid')) }
 
           let(:invalid_messages) do
             10.times.map do |index|
@@ -1462,7 +1462,7 @@ describe Ably::Realtime::Channel, :event_machine do
 
         it 'publishes all messages, all success callbacks are called, and a history request confirms all messages were published' do
           connection_count.times.map do
-            auto_close Ably::Realtime::Client.new(client_options)
+            auto_close Ably::Internal.create_realtime_client(client_options)
           end.each do |client|
             channel = client.channels.get(channel_name)
             messages.each do |message|
@@ -1484,7 +1484,7 @@ describe Ably::Realtime::Channel, :event_machine do
         65536
 
         it 'rejects the publish' do
-          messages = (Ably::Realtime::Connection::MAX_PROTOCOL_MESSAGE_BATCH_SIZE + 1).times.map do
+          messages = (Ably::PubSub::Realtime::Connection::MAX_PROTOCOL_MESSAGE_BATCH_SIZE + 1).times.map do
             { name: 'foo' }
           end
 
@@ -1497,9 +1497,9 @@ describe Ably::Realtime::Channel, :event_machine do
 
       context 'identified clients' do
         context 'when authenticated with a wildcard client_id' do
-          let(:token)            { Ably::Rest::Client.new(default_options).auth.request_token(client_id: '*') }
+          let(:token)            { Ably::Internal.create_http_client(default_options).auth.request_token(client_id: '*') }
           let(:client_options)   { default_options.merge(key: nil, token: token) }
-          let(:client)           { auto_close Ably::Realtime::Client.new(client_options) }
+          let(:client)           { auto_close Ably::Internal.create_realtime_client(client_options) }
           let(:channel)          { client.channels.get(channel_name) }
 
           context 'with a valid client_id in the message' do
@@ -1546,9 +1546,9 @@ describe Ably::Realtime::Channel, :event_machine do
         end
 
         context 'when authenticated with a Token string with an implicit client_id' do
-          let(:token)            { Ably::Rest::Client.new(default_options).auth.request_token(client_id: 'valid').token }
+          let(:token)            { Ably::Internal.create_http_client(default_options).auth.request_token(client_id: 'valid').token }
           let(:client_options)   { default_options.merge(key: nil, token: token) }
-          let(:client)           { auto_close Ably::Realtime::Client.new(client_options) }
+          let(:client)           { auto_close Ably::Internal.create_realtime_client(client_options) }
           let(:channel)          { client.channels.get(channel_name) }
 
           context 'before the client is CONNECTED and the client\'s identity has been obtained' do
@@ -1637,9 +1637,9 @@ describe Ably::Realtime::Channel, :event_machine do
         end
 
         context 'when authenticated with a valid client_id' do
-          let(:token)            { Ably::Rest::Client.new(default_options).auth.request_token(client_id: 'valid') }
+          let(:token)            { Ably::Internal.create_http_client(default_options).auth.request_token(client_id: 'valid') }
           let(:client_options)   { default_options.merge(key: nil, token: token) }
-          let(:client)           { auto_close Ably::Realtime::Client.new(client_options) }
+          let(:client)           { auto_close Ably::Internal.create_realtime_client(client_options) }
           let(:channel)          { client.channels.get(channel_name) }
 
           context 'with a valid client_id' do
@@ -1686,9 +1686,9 @@ describe Ably::Realtime::Channel, :event_machine do
         end
 
         context 'when anonymous and no client_id' do
-          let(:token)            { Ably::Rest::Client.new(default_options).auth.request_token(client_id: nil) }
+          let(:token)            { Ably::Internal.create_http_client(default_options).auth.request_token(client_id: nil) }
           let(:client_options)   { default_options.merge(key: nil, token: token) }
-          let(:client)           { auto_close Ably::Realtime::Client.new(client_options) }
+          let(:client)           { auto_close Ably::Internal.create_realtime_client(client_options) }
           let(:channel)          { client.channels.get(channel_name) }
 
           context 'with a client_id in the message' do
@@ -1722,7 +1722,7 @@ describe Ably::Realtime::Channel, :event_machine do
       end
 
       context 'message size exceeded (#TO3l8)' do
-        let(:client) { auto_close Ably::Realtime::Client.new(client_options) }
+        let(:client) { auto_close Ably::Internal.create_realtime_client(client_options) }
         let(:channel) { client.channels.get(channel_name) }
 
         context 'and max_message_size is default (65536 bytes)' do
@@ -2414,8 +2414,8 @@ describe Ably::Realtime::Channel, :event_machine do
     end
 
     describe '#presence' do
-      it 'returns a Ably::Realtime::Presence object' do
-        expect(channel.presence).to be_a(Ably::Realtime::Presence)
+      it 'returns a Ably::PubSub::Realtime::Presence object' do
+        expect(channel.presence).to be_a(Ably::PubSub::Realtime::Presence)
         stop_reactor
       end
     end
@@ -2491,7 +2491,7 @@ describe Ably::Realtime::Channel, :event_machine do
       context 'ChannelStateChange object' do
         it 'has current state' do
           channel.on(:attached) do |channel_state_change|
-            expect(channel_state_change.current).to be_a(Ably::Realtime::Channel::STATE)
+            expect(channel_state_change.current).to be_a(Ably::PubSub::Realtime::Channel::STATE)
             expect(channel_state_change.current).to eq(:attached)
             stop_reactor
           end
@@ -2500,7 +2500,7 @@ describe Ably::Realtime::Channel, :event_machine do
 
         it 'has a previous state' do
           channel.on(:attached) do |channel_state_change|
-            expect(channel_state_change.previous).to be_a(Ably::Realtime::Channel::STATE)
+            expect(channel_state_change.previous).to be_a(Ably::PubSub::Realtime::Channel::STATE)
             expect(channel_state_change.previous).to eq(:attaching)
             stop_reactor
           end
@@ -2509,7 +2509,7 @@ describe Ably::Realtime::Channel, :event_machine do
 
         it 'has the event that generated the state change (#TA5)' do
           channel.on(:attached) do |channel_state_change|
-            expect(channel_state_change.event).to be_a(Ably::Realtime::Channel::EVENT)
+            expect(channel_state_change.event).to be_a(Ably::PubSub::Realtime::Channel::EVENT)
             expect(channel_state_change.event).to eq(:attached)
             stop_reactor
           end
@@ -2569,7 +2569,7 @@ describe Ably::Realtime::Channel, :event_machine do
               connection_id = client.connection.id
               expect(channel_state_change.resumed).to be_falsey
 
-              recover_client = auto_close Ably::Realtime::Client.new(client_options.merge(recover: client.connection.create_recovery_key))
+              recover_client = auto_close Ably::Internal.create_realtime_client(client_options.merge(recover: client.connection.create_recovery_key))
               recover_client.connection.once(:connected) do
                 expect(recover_client.connection.id).to eql(connection_id)
                 recover_channel = recover_client.channels.get(channel_name)
@@ -2586,7 +2586,7 @@ describe Ably::Realtime::Channel, :event_machine do
             client.connection.once(:connected) do
               recovery_key = client.connection.create_recovery_key
               client.connection.once(:closed) do
-                recover_client = auto_close Ably::Realtime::Client.new(client_options.merge(recover: recovery_key, log_level: :error))
+                recover_client = auto_close Ably::Internal.create_realtime_client(client_options.merge(recover: recovery_key, log_level: :error))
                 recover_client.connection.once(:connected) do
                   recover_channel = recover_client.channels.get(channel_name)
                   recover_channel.attach
@@ -2646,7 +2646,7 @@ describe Ably::Realtime::Channel, :event_machine do
         %w(suspended failed).each do |channel_state|
           context(channel_state) do
             let(:client) do
-              auto_close Ably::Realtime::Client.new(default_options.merge(log_level: :error))
+              auto_close Ably::Internal.create_realtime_client(default_options.merge(log_level: :error))
             end
 
             specify 'all queued messages fail with NACK (#RTL11)' do

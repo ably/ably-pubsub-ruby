@@ -1,10 +1,10 @@
 # encoding: utf-8
 require 'spec_helper'
 
-describe Ably::Realtime::Channels, :event_machine do
+describe Ably::PubSub::Realtime::Channels, :event_machine do
   shared_examples 'a channel' do
     it 'returns a channel object' do
-      expect(channel).to be_a Ably::Realtime::Channel
+      expect(channel).to be_a Ably::PubSub::Realtime::Channel
       expect(channel.name).to eql(channel_name)
       stop_reactor
     end
@@ -21,7 +21,7 @@ describe Ably::Realtime::Channels, :event_machine do
       { key: api_key, environment: environment, protocol: protocol }
     end
     let(:client) do
-      auto_close Ably::Realtime::Client.new(client_options)
+      auto_close Ably::Internal.create_realtime_client(client_options)
     end
     let(:channel_name) { random_str }
     let(:options) do
@@ -82,7 +82,7 @@ describe Ably::Realtime::Channels, :event_machine do
       it 'overrides the existing channel options and returns the channel object' do
         expect(original_channel.options.to_h).to_not include(:encrypted)
         new_channel = client.channels.get(channel_name, new_channel_options)
-        expect(new_channel).to be_a(Ably::Realtime::Channel)
+        expect(new_channel).to be_a(Ably::PubSub::Realtime::Channel)
         expect(new_channel.options[:encrypted]).to eql(true)
         stop_reactor
       end
@@ -105,7 +105,7 @@ describe Ably::Realtime::Channels, :event_machine do
       it 'returns the existing channel without modifying the channel options' do
         expect(original_channel.options.to_h).to eq(options)
         new_channel = client.channels.get(channel_name)
-        expect(new_channel).to be_a(Ably::Realtime::Channel)
+        expect(new_channel).to be_a(Ably::PubSub::Realtime::Channel)
         expect(original_channel.options.to_h).to eq(options)
         stop_reactor
       end

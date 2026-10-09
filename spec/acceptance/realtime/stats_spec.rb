@@ -1,9 +1,9 @@
 require 'spec_helper'
 
-describe Ably::Realtime::Client, '#stats', :event_machine do
+describe Ably::PubSub::Realtime::Client, '#stats', :event_machine do
   vary_by_protocol do
     let(:client) do
-      auto_close Ably::Realtime::Client.new(key: api_key, environment: environment, protocol: protocol)
+      auto_close Ably::Internal.create_realtime_client(key: api_key, environment: environment, protocol: protocol)
     end
 
     describe 'fetching stats' do

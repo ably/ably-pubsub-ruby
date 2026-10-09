@@ -1,9 +1,9 @@
 require 'spec_helper'
 
-describe Ably::Realtime::Client, '#time', :event_machine do
+describe Ably::PubSub::Realtime::Client, '#time', :event_machine do
   vary_by_protocol do
     let(:client) do
-      auto_close Ably::Realtime::Client.new(key: api_key, environment: environment, protocol: protocol)
+      auto_close Ably::Internal.create_realtime_client(key: api_key, environment: environment, protocol: protocol)
     end
 
     describe 'fetching the service time' do
@@ -25,7 +25,7 @@ describe Ably::Realtime::Client, '#time', :event_machine do
 
       context 'with reconfigured HTTP timeout' do
         let(:client) do
-          auto_close Ably::Realtime::Client.new(http_request_timeout: 0.0001, key: api_key, environment: environment, protocol: protocol, log_level: :fatal)
+          auto_close Ably::Internal.create_realtime_client(http_request_timeout: 0.0001, key: api_key, environment: environment, protocol: protocol, log_level: :fatal)
         end
 
         it 'should raise a timeout exception' do

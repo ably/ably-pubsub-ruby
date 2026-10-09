@@ -1,16 +1,16 @@
 # encoding: utf-8
 require 'spec_helper'
 
-# These tests are a subset of Ably::Rest::Push::Admin in async EM style
+# These tests are a subset of Ably::PubSub::Http::Push::Admin in async EM style
 # The more robust complete test suite is in rest/push_admin_spec.rb
-describe Ably::Realtime::Push::Admin, :event_machine do
+describe Ably::PubSub::Realtime::Push::Admin, :event_machine do
   include Ably::Modules::Conversions
 
   vary_by_protocol do
     let(:default_options) { { key: api_key, environment: environment, protocol: protocol} }
     let(:client_options)  { default_options }
     let(:client) do
-      Ably::Realtime::Client.new(client_options)
+      Ably::Internal.create_realtime_client(client_options)
     end
 
     let(:basic_notification_payload) do

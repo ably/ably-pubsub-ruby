@@ -1,7 +1,7 @@
 require 'singleton'
 
 class TestApp
-  TEST_RESOURCES_PATH = File.expand_path('../../../lib/submodules/ably-common/test-resources', __FILE__)
+  TEST_RESOURCES_PATH = File.expand_path('../../../core/lib/submodules/ably-common/test-resources', __FILE__)
 
   # App configuration for test app
   # See https://github.com/ably/ably-common/blob/main/test-resources/test-app-setup.json
@@ -94,13 +94,13 @@ class TestApp
   end
 
   def create_test_stats(stats)
-    client = Ably::Rest::Client.new(key: api_key, environment: environment)
+    client = Ably::Internal.create_http_client(key: api_key, environment: environment)
     response = client.post('/stats', stats)
     raise "Could not create stats fixtures.  Ably responded with status #{response.status}\n#{response.body}" unless (200..299).include?(response.status)
   end
 
   private
   def sandbox_client
-    @sandbox_client ||= Ably::Rest::Client.new(key: 'app.key:secret', tls: true, environment: environment)
+    @sandbox_client ||= Ably::Internal.create_http_client(key: 'app.key:secret', tls: true, environment: environment)
   end
 end

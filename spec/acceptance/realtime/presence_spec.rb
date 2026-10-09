@@ -1,20 +1,20 @@
 # encoding: utf-8
 require 'spec_helper'
 
-describe Ably::Realtime::Presence, :event_machine do
+describe Ably::PubSub::Realtime::Presence, :event_machine do
   include Ably::Modules::Conversions
 
   vary_by_protocol do
     let(:default_options) { { key: api_key, environment: environment, protocol: protocol } }
     let(:client_options)  { default_options }
 
-    let(:anonymous_client) { auto_close Ably::Realtime::Client.new(client_options) }
+    let(:anonymous_client) { auto_close Ably::Internal.create_realtime_client(client_options) }
     let(:client_one_id)    { random_str }
-    let(:client_one)       { auto_close Ably::Realtime::Client.new(client_options.merge(client_id: client_one_id)) }
+    let(:client_one)       { auto_close Ably::Internal.create_realtime_client(client_options.merge(client_id: client_one_id)) }
     let(:client_two_id)    { random_str }
-    let(:client_two)       { auto_close Ably::Realtime::Client.new(client_options.merge(client_id: client_two_id)) }
+    let(:client_two)       { auto_close Ably::Internal.create_realtime_client(client_options.merge(client_id: client_two_id)) }
 
-    let(:wildcard_token)            { lambda { |token_params| Ably::Rest::Client.new(client_options).auth.request_token(client_id: '*') } }
+    let(:wildcard_token)            { lambda { |token_params| Ably::Internal.create_http_client(client_options).auth.request_token(client_id: '*') } }
     let(:channel_name)              { "presence-#{random_str(4)}" }
     let(:channel_anonymous_client)  { anonymous_client.channel(channel_name) }
     let(:presence_anonymous_client) { channel_anonymous_client.presence }
@@ -136,7 +136,7 @@ describe Ably::Realtime::Presence, :event_machine do
         end
 
         context 'when :queue_messages client option is false' do
-          let(:client_one) { auto_close Ably::Realtime::Client.new(default_options.merge(queue_messages: false, client_id: client_id)) }
+          let(:client_one) { auto_close Ably::Internal.create_realtime_client(default_options.merge(queue_messages: false, client_id: client_id)) }
 
           context 'and connection state initialized' do
             it 'fails the deferrable' do
@@ -162,7 +162,7 @@ describe Ably::Realtime::Presence, :event_machine do
           end
 
           context 'and connection state disconnected' do
-            let(:client_one) { auto_close Ably::Realtime::Client.new(default_options.merge(queue_messages: false, client_id: client_id, :log_level => :error)) }
+            let(:client_one) { auto_close Ably::Internal.create_realtime_client(default_options.merge(queue_messages: false, client_id: client_id, :log_level => :error)) }
 
             it 'fails the deferrable' do
               client_one.connection.once(:connected) do
@@ -353,9 +353,9 @@ describe Ably::Realtime::Presence, :event_machine do
 
     shared_examples_for 'a presence on behalf of another client method' do |method_name|
       context ":#{method_name} when authenticated with a wildcard client_id" do
-        let(:token)            { Ably::Rest::Client.new(default_options).auth.request_token(client_id: '*').token }
+        let(:token)            { Ably::Internal.create_http_client(default_options).auth.request_token(client_id: '*').token }
         let(:client_options)   { default_options.merge(key: nil, token: token) }
-        let(:client)           { auto_close Ably::Realtime::Client.new(client_options) }
+        let(:client)           { auto_close Ably::Internal.create_realtime_client(client_options) }
         let(:presence_channel) { client.channels.get(channel_name).presence }
 
         context 'and a valid client_id' do
@@ -391,9 +391,9 @@ describe Ably::Realtime::Presence, :event_machine do
       end
 
       context ":#{method_name} when authenticated with a valid client_id" do
-        let(:token)            { Ably::Rest::Client.new(default_options).auth.request_token(client_id: 'valid').token }
+        let(:token)            { Ably::Internal.create_http_client(default_options).auth.request_token(client_id: 'valid').token }
         let(:client_options)   { default_options.merge(key: nil, token: token) }
-        let(:client)           { auto_close Ably::Realtime::Client.new(client_options.merge(log_level: :error)) }
+        let(:client)           { auto_close Ably::Internal.create_realtime_client(client_options.merge(log_level: :error)) }
         let(:channel)          { client.channels.get(channel_name) }
         let(:presence_channel) { channel.presence }
 
@@ -433,9 +433,9 @@ describe Ably::Realtime::Presence, :event_machine do
       end
 
       context ":#{method_name} when anonymous and no client_id" do
-        let(:token)            { Ably::Rest::Client.new(default_options).auth.request_token(client_id: nil).token }
+        let(:token)            { Ably::Internal.create_http_client(default_options).auth.request_token(client_id: nil).token }
         let(:client_options)   { default_options.merge(key: nil, token: token) }
-        let(:client)           { auto_close Ably::Realtime::Client.new(client_options.merge(log_level: :error)) }
+        let(:client)           { auto_close Ably::Internal.create_realtime_client(client_options.merge(log_level: :error)) }
         let(:channel)          { client.channels.get(channel_name) }
         let(:presence_channel) { channel.presence }
 
@@ -605,7 +605,7 @@ describe Ably::Realtime::Presence, :event_machine do
         let(:leave_action) { 3 }
         let(:now) { Time.now.to_i * 1000 }
         let(:entered) { [] }
-        let(:client_one) { auto_close Ably::Realtime::Client.new(default_options.merge(auth_callback: wildcard_token)) }
+        let(:client_one) { auto_close Ably::Internal.create_realtime_client(default_options.merge(auth_callback: wildcard_token)) }
 
         def setup_members_on(presence)
           enter_expected_count.times do |indx|
@@ -768,7 +768,7 @@ describe Ably::Realtime::Presence, :event_machine do
         let(:present) { [] }
         let(:entered) { [] }
         let(:sync_pages_received) { [] }
-        let(:client_one) { auto_close Ably::Realtime::Client.new(client_options.merge(auth_callback: wildcard_token)) }
+        let(:client_one) { auto_close Ably::Internal.create_realtime_client(client_options.merge(auth_callback: wildcard_token)) }
 
         def setup_members_on(presence)
           enter_expected_count.times do |indx|
@@ -1092,7 +1092,7 @@ describe Ably::Realtime::Presence, :event_machine do
 
       context 'without necessary capabilities to join presence' do
         let(:restricted_client) do
-          auto_close Ably::Realtime::Client.new(default_options.merge(key: restricted_api_key, log_level: :fatal))
+          auto_close Ably::Internal.create_realtime_client(default_options.merge(key: restricted_api_key, log_level: :fatal))
         end
         let(:restricted_channel)  { restricted_client.channel("cansubscribe:channel") }
         let(:restricted_presence) { restricted_channel.presence }
@@ -1292,8 +1292,8 @@ describe Ably::Realtime::Presence, :event_machine do
       let(:client_count) { 5 }
       let(:clients)      { [] }
       let(:data)         { random_str }
-      let(:client_one)   { auto_close Ably::Realtime::Client.new(client_options.merge(auth_callback: wildcard_token)) }
-      let(:client_two)   { auto_close Ably::Realtime::Client.new(client_options.merge(auth_callback: wildcard_token)) }
+      let(:client_one)   { auto_close Ably::Internal.create_realtime_client(client_options.merge(auth_callback: wildcard_token)) }
+      let(:client_two)   { auto_close Ably::Internal.create_realtime_client(client_options.merge(auth_callback: wildcard_token)) }
 
       context '#enter_client' do
         context 'multiple times on the same channel with different client_ids' do
@@ -1347,7 +1347,7 @@ describe Ably::Realtime::Presence, :event_machine do
 
         context 'without necessary capabilities to enter on behalf of another client' do
           let(:restricted_client) do
-            auto_close Ably::Realtime::Client.new(default_options.merge(key: restricted_api_key, log_level: :fatal))
+            auto_close Ably::Internal.create_realtime_client(default_options.merge(key: restricted_api_key, log_level: :fatal))
           end
           let(:restricted_channel)  { restricted_client.channel("cansubscribe:channel") }
           let(:restricted_presence) { restricted_channel.presence }
@@ -1632,7 +1632,7 @@ describe Ably::Realtime::Presence, :event_machine do
         let(:pages)               { 2 }
         let(:members_per_page)    { 100 }
         let(:sync_pages_received) { [] }
-        let(:client_one)          { auto_close Ably::Realtime::Client.new(client_options.merge(auth_callback: wildcard_token)) }
+        let(:client_one)          { auto_close Ably::Internal.create_realtime_client(client_options.merge(auth_callback: wildcard_token)) }
         let(:client_options)      { default_options.merge(log_level: :none) }
 
         def connect_members_deferrables
@@ -1815,8 +1815,8 @@ describe Ably::Realtime::Presence, :event_machine do
       end
 
       context 'with lots of members on different clients' do
-        let(:client_one)         { auto_close Ably::Realtime::Client.new(client_options.merge(auth_callback: wildcard_token)) }
-        let(:client_two)         { auto_close Ably::Realtime::Client.new(client_options.merge(auth_callback: wildcard_token)) }
+        let(:client_one)         { auto_close Ably::Internal.create_realtime_client(client_options.merge(auth_callback: wildcard_token)) }
+        let(:client_two)         { auto_close Ably::Internal.create_realtime_client(client_options.merge(auth_callback: wildcard_token)) }
         let(:members_per_client) { 10 }
         let(:clients_entered)    { Hash.new { |hash, key| hash[key] = 0 } }
         let(:total_members)      { members_per_client * 2 }
@@ -2003,7 +2003,7 @@ describe Ably::Realtime::Presence, :event_machine do
       let(:client_id)   { random_str.encode(Encoding::ASCII_8BIT) }
 
       context 'in connection set up' do
-        let(:client_one)  { auto_close Ably::Realtime::Client.new(default_options.merge(client_id: client_id)) }
+        let(:client_one)  { auto_close Ably::Internal.create_realtime_client(default_options.merge(client_id: client_id)) }
 
         it 'is converted into UTF_8' do
           presence_client_one.enter
@@ -2016,7 +2016,7 @@ describe Ably::Realtime::Presence, :event_machine do
       end
 
       context 'in channel options' do
-        let(:client_one)  { auto_close Ably::Realtime::Client.new(default_options) }
+        let(:client_one)  { auto_close Ably::Internal.create_realtime_client(default_options) }
 
         it 'is converted into UTF_8' do
           channel_client_one.attach do
@@ -2383,8 +2383,8 @@ describe Ably::Realtime::Presence, :event_machine do
       let(:present_only_capability) do
         { channel_name => ["presence"] }
       end
-      let(:present_only_callback) { lambda { |token_params| Ably::Rest::Client.new(client_options).auth.request_token(client_id: '*', capability: present_only_capability) } }
-      let(:client_one) { auto_close Ably::Realtime::Client.new(client_options.merge(auth_callback: present_only_callback)) }
+      let(:present_only_callback) { lambda { |token_params| Ably::Internal.create_http_client(client_options).auth.request_token(client_id: '*', capability: present_only_capability) } }
+      let(:client_one) { auto_close Ably::Internal.create_realtime_client(client_options.merge(auth_callback: present_only_callback)) }
 
       it 'receives presence updates for all presence events generated by the current connection and the presence map is kept up to date (#RTP17a)' do
         enter_client_ids = []
@@ -2609,7 +2609,7 @@ describe Ably::Realtime::Presence, :event_machine do
           let(:client_one_options) do
             client_options.merge(client_id: client_one_id, log_level: :error)
           end
-          let(:client_one) { auto_close Ably::Realtime::Client.new(client_one_options) }
+          let(:client_one) { auto_close Ably::Internal.create_realtime_client(client_one_options) }
 
           it 'should emit an ErrorInfo with error code 91004 (#RTP5c3)' do
             presence_client_one.enter
@@ -2682,8 +2682,8 @@ describe Ably::Realtime::Presence, :event_machine do
       end
 
       context 'channel transitions to the FAILED state' do
-        let(:anonymous_client) { auto_close Ably::Realtime::Client.new(client_options.merge(log_level: :fatal)) }
-        let(:client_one)       { auto_close Ably::Realtime::Client.new(client_options.merge(client_id: client_one_id, log_level: :fatal)) }
+        let(:anonymous_client) { auto_close Ably::Internal.create_realtime_client(client_options.merge(log_level: :fatal)) }
+        let(:client_one)       { auto_close Ably::Internal.create_realtime_client(client_options.merge(client_id: client_one_id, log_level: :fatal)) }
 
         it 'clears the PresenceMap and local member map copy and does not emit any presence events (#RTP5a)' do
           presence_client_one.enter
@@ -2745,10 +2745,10 @@ describe Ably::Realtime::Presence, :event_machine do
           lambda do |token_params|
             # Pause to allow presence updates to occur whilst disconnected
             sleep 1
-            Ably::Rest::Client.new(client_options).auth.request_token
+            Ably::Internal.create_http_client(client_options).auth.request_token
           end
         end
-        let(:anonymous_client) { auto_close Ably::Realtime::Client.new(client_options.merge(auth_callback: auth_callback)) }
+        let(:anonymous_client) { auto_close Ably::Internal.create_realtime_client(client_options.merge(auth_callback: auth_callback)) }
 
         it 'maintains the PresenceMap and only publishes presence event changes since the last attached state (#RTP5f)' do
           presence_client_one.enter do

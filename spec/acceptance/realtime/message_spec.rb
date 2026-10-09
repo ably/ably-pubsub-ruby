@@ -4,17 +4,17 @@ require 'base64'
 require 'json'
 require 'securerandom'
 
-describe 'Ably::Realtime::Channel Message', :event_machine do
+describe 'Ably::PubSub::Realtime::Channel Message', :event_machine do
   vary_by_protocol do
     let(:default_options) { options.merge(key: api_key, environment: environment, protocol: protocol) }
     let(:client_options)  { default_options }
     let(:client) do
-      auto_close Ably::Realtime::Client.new(client_options)
+      auto_close Ably::Internal.create_realtime_client(client_options)
     end
     let(:channel) { client.channel(channel_name) }
 
     let(:other_client) do
-      auto_close Ably::Realtime::Client.new(client_options)
+      auto_close Ably::Internal.create_realtime_client(client_options)
     end
     let(:other_client_channel) { other_client.channel(channel_name) }
 
@@ -293,12 +293,12 @@ describe 'Ably::Realtime::Channel Message', :event_machine do
 
       context 'with :echo_messages option set to false' do
         let(:no_echo_client) do
-          auto_close Ably::Realtime::Client.new(default_options.merge(echo_messages: false))
+          auto_close Ably::Internal.create_realtime_client(default_options.merge(echo_messages: false))
         end
         let(:no_echo_channel) { no_echo_client.channel(channel_name) }
 
         let(:rest_client) do
-          Ably::Rest::Client.new(default_options)
+          Ably::Internal.create_http_client(default_options)
         end
 
         it 'will not echo messages to the client but will still broadcast messages to other connected clients', em_timeout: 10 do
@@ -398,7 +398,7 @@ describe 'Ably::Realtime::Channel Message', :event_machine do
 
     context 'without suitable publishing permissions' do
       let(:restricted_client) do
-        auto_close Ably::Realtime::Client.new(options.merge(key: restricted_api_key, environment: environment, protocol: protocol, :log_level => :error))
+        auto_close Ably::Internal.create_realtime_client(options.merge(key: restricted_api_key, environment: environment, protocol: protocol, :log_level => :error))
       end
       let(:restricted_channel) { restricted_client.channel("cansubscribe:example") }
       let(:payload)            { 'Test message without permission to publish' }
@@ -485,7 +485,7 @@ describe 'Ably::Realtime::Channel Message', :event_machine do
         end
       end
 
-      resources_root = File.expand_path('../../../../lib/submodules/ably-common/test-resources', __FILE__)
+      resources_root = File.expand_path('../../../../core/lib/submodules/ably-common/test-resources', __FILE__)
 
       shared_examples 'add_tests_for_data' do |data|
         data['items'].each_with_index do |item, index|
@@ -550,7 +550,7 @@ describe 'Ably::Realtime::Channel Message', :event_machine do
       context 'subscribing with a different transport protocol' do
         let(:other_protocol) { protocol == :msgpack ? :json : :msgpack }
         let(:other_client) do
-          auto_close Ably::Realtime::Client.new(default_options.merge(protocol: other_protocol))
+          auto_close Ably::Internal.create_realtime_client(default_options.merge(protocol: other_protocol))
         end
 
         let(:cipher_options)            { { key: Ably::Util::Crypto.generate_random_key, algorithm: 'aes', mode: 'cbc', key_length: 256 } }
@@ -823,14 +823,14 @@ describe 'Ably::Realtime::Channel Message', :event_machine do
     let(:client_options)  { { key: api_key, environment: environment, protocol: :json } }
     let(:channel_name) { "subscribe_send_text-#{random_str}" }
 
-    fixtures_path = File.expand_path('../../../../lib/submodules/ably-common/test-resources/messages-encoding.json', __FILE__)
+    fixtures_path = File.expand_path('../../../../core/lib/submodules/ably-common/test-resources/messages-encoding.json', __FILE__)
 
     context 'over a JSON transport' do
       let(:realtime_client) do
-        auto_close Ably::Realtime::Client.new(client_options)
+        auto_close Ably::Internal.create_realtime_client(client_options)
       end
       let(:rest_client) do
-        Ably::Rest::Client.new(client_options)
+        Ably::Internal.create_http_client(client_options)
       end
       let(:realtime_channel) { realtime_client.channels.get(channel_name) }
 
@@ -881,10 +881,10 @@ describe 'Ably::Realtime::Channel Message', :event_machine do
       JSON.parse(File.read(fixtures_path))['messages'].each do |encoding_spec|
         context "when publishing a #{encoding_spec['expectedType']} using JSON protocol" do
           let(:rest_publish_client) do
-            Ably::Rest::Client.new(client_options.merge(protocol: :json))
+            Ably::Internal.create_http_client(client_options.merge(protocol: :json))
           end
           let(:realtime_subscribe_client) do
-            Ably::Realtime::Client.new(client_options.merge(protocol: :msgpack))
+            Ably::Internal.create_realtime_client(client_options.merge(protocol: :msgpack))
           end
           let(:realtime_subscribe_channel) { realtime_subscribe_client.channels.get(channel_name) }
 
@@ -909,10 +909,10 @@ describe 'Ably::Realtime::Channel Message', :event_machine do
 
         context "when retrieving a #{encoding_spec['expectedType']} using JSON protocol" do
           let(:rest_publish_client) do
-            Ably::Rest::Client.new(client_options.merge(protocol: :msgpack))
+            Ably::Internal.create_http_client(client_options.merge(protocol: :msgpack))
           end
           let(:rest_retrieve_client) do
-            Ably::Rest::Client.new(client_options.merge(protocol: :json))
+            Ably::Internal.create_http_client(client_options.merge(protocol: :json))
           end
           let(:rest_publish_channel) { rest_publish_client.channels.get(channel_name) }
 

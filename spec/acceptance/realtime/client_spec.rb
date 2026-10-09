@@ -1,7 +1,7 @@
 # encoding: utf-8
 require 'spec_helper'
 
-describe Ably::Realtime::Client, :event_machine do
+describe Ably::PubSub::Realtime::Client, :event_machine do
   vary_by_protocol do
     let(:default_options) do
       { key: api_key, environment: environment, protocol: protocol }
@@ -11,8 +11,8 @@ describe Ably::Realtime::Client, :event_machine do
     let(:connection)     { subject.connection }
     let(:auth_params)    { subject.auth.auth_params_sync }
 
-    subject              { auto_close Ably::Realtime::Client.new(client_options) }
-    let(:sub_client)     { auto_close Ably::Realtime::Client.new(client_options) }
+    subject              { auto_close Ably::Internal.create_realtime_client(client_options) }
+    let(:sub_client)     { auto_close Ably::Internal.create_realtime_client(client_options) }
 
     context 'initialization' do
       context 'basic auth' do
@@ -27,7 +27,7 @@ describe Ably::Realtime::Client, :event_machine do
 
         context 'with an invalid API key' do
           let(:custom_logger_object) { TestLogger.new }
-          let(:client) { Ably::Realtime::Client.new(client_options.merge(key: 'app.key:secret', logger: custom_logger_object)) }
+          let(:client) { Ably::Internal.create_realtime_client(client_options.merge(key: 'app.key:secret', logger: custom_logger_object)) }
 
           it 'logs an entry with a help href url matching the code #TI5' do
             client.connect
@@ -61,7 +61,7 @@ describe Ably::Realtime::Client, :event_machine do
         [true, false].each do |tls_enabled|
           context "with TLS #{tls_enabled ? 'enabled' : 'disabled'}" do
             let(:capability)      { { :foo => ["publish"] } }
-            let(:token_client)    { auto_close Ably::Realtime::Client.new(default_options) }
+            let(:token_client)    { auto_close Ably::Internal.create_realtime_client(default_options) }
             let(:token_details)   { token_client.auth.request_token_sync(capability: capability) }
             let(:client_options)  { default_options.merge(token: token_details.token) }
 
@@ -95,7 +95,7 @@ describe Ably::Realtime::Client, :event_machine do
           let(:auth)      { subject.auth }
 
           subject do
-            auto_close Ably::Realtime::Client.new(client_options.merge(auth_callback: Proc.new do
+            auto_close Ably::Internal.create_realtime_client(client_options.merge(auth_callback: Proc.new do
               @block_called = true
               auth.create_token_request_sync(client_id: client_id)
             end))
@@ -134,9 +134,9 @@ describe Ably::Realtime::Client, :event_machine do
           end
 
           context 'with a wildcard client_id token ' do
-            subject                 { auto_close Ably::Realtime::Client.new(client_options) }
+            subject                 { auto_close Ably::Internal.create_realtime_client(client_options) }
             let(:client_options)    { default_options.merge(auth_callback: lambda { |token_params| auth_token_object }, client_id: client_id) }
-            let(:rest_auth_client)  { Ably::Rest::Client.new(default_options.merge(key: api_key)) }
+            let(:rest_auth_client)  { Ably::Internal.create_http_client(default_options.merge(key: api_key)) }
             let(:auth_token_object) { rest_auth_client.auth.request_token(client_id: '*') }
 
             context 'and an explicit client_id in ClientOptions' do
@@ -175,7 +175,7 @@ describe Ably::Realtime::Client, :event_machine do
 
         context 'with an invalid wildcard "*" :client_id' do
           it 'raises an exception' do
-            expect { Ably::Realtime::Client.new(client_options.merge(key: api_key, client_id: '*')) }.to raise_error ArgumentError
+            expect { Ably::Internal.create_realtime_client(client_options.merge(key: api_key, client_id: '*')) }.to raise_error ArgumentError
             stop_reactor
           end
         end
@@ -212,21 +212,21 @@ describe Ably::Realtime::Client, :event_machine do
 
     context '#connection' do
       it 'provides access to the Connection object' do
-        expect(subject.connection).to be_a(Ably::Realtime::Connection)
+        expect(subject.connection).to be_a(Ably::PubSub::Realtime::Connection)
         stop_reactor
       end
     end
 
     context '#channels' do
       it 'provides access to the Channels collection object' do
-        expect(subject.channels).to be_a(Ably::Realtime::Channels)
+        expect(subject.channels).to be_a(Ably::PubSub::Realtime::Channels)
         stop_reactor
       end
     end
 
     context '#auth' do
       it 'provides access to the Realtime::Auth object' do
-        expect(subject.auth).to be_a(Ably::Realtime::Auth)
+        expect(subject.auth).to be_a(Ably::PubSub::Realtime::Auth)
         stop_reactor
       end
     end
@@ -442,7 +442,7 @@ describe Ably::Realtime::Client, :event_machine do
 
       context 'queue_messages ClientOption' do
         context 'when true' do
-          subject { auto_close Ably::Realtime::Client.new(client_options.merge(auto_connect: false)) }
+          subject { auto_close Ably::Internal.create_realtime_client(client_options.merge(auto_connect: false)) }
 
           it 'will queue messages whilst connecting and publish once connected' do
             sub_channel.attach do
@@ -459,7 +459,7 @@ describe Ably::Realtime::Client, :event_machine do
         end
 
         context 'when false' do
-          subject { auto_close Ably::Realtime::Client.new(client_options.merge(auto_connect: false, queue_messages: false)) }
+          subject { auto_close Ably::Internal.create_realtime_client(client_options.merge(auto_connect: false, queue_messages: false)) }
 
           it 'will reject messages on an initializing connection' do
             sub_channel.attach do
@@ -479,7 +479,7 @@ describe Ably::Realtime::Client, :event_machine do
         let(:channel_name) { random_str }
 
         it 'rejects the publish' do
-          messages = (Ably::Realtime::Connection::MAX_PROTOCOL_MESSAGE_BATCH_SIZE + 1).times.map do
+          messages = (Ably::PubSub::Realtime::Connection::MAX_PROTOCOL_MESSAGE_BATCH_SIZE + 1).times.map do
             { name: 'foo' }
           end
 

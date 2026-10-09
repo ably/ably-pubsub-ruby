@@ -1,17 +1,17 @@
 # encoding: utf-8
 require 'spec_helper'
 
-describe Ably::Realtime::Presence, 'history', :event_machine do
+describe Ably::PubSub::Realtime::Presence, 'history', :event_machine do
   vary_by_protocol do
     let(:default_options)     { { key: api_key, environment: environment, protocol: protocol } }
 
     let(:channel_name)        { "persisted:#{random_str(2)}" }
 
-    let(:client_one)          { auto_close Ably::Realtime::Client.new(default_options.merge(client_id: random_str)) }
+    let(:client_one)          { auto_close Ably::Internal.create_realtime_client(default_options.merge(client_id: random_str)) }
     let(:channel_client_one)  { client_one.channel(channel_name) }
     let(:presence_client_one) { channel_client_one.presence }
 
-    let(:client_two)          { auto_close Ably::Realtime::Client.new(default_options.merge(client_id: random_str)) }
+    let(:client_two)          { auto_close Ably::Internal.create_realtime_client(default_options.merge(client_id: random_str)) }
     let(:channel_client_two)  { client_two.channel(channel_name) }
     let(:presence_client_two) { channel_client_two.presence }
 
