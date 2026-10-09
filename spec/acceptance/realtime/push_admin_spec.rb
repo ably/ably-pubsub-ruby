@@ -7,7 +7,7 @@ describe Ably::PubSub::Realtime::Push::Admin, :event_machine do
   include Ably::Modules::Conversions
 
   vary_by_protocol do
-    let(:default_options) { { key: api_key, environment: environment, protocol: protocol} }
+    let(:default_options) { { key: api_key, endpoint: endpoint, protocol: protocol} }
     let(:client_options)  { default_options }
     let(:client) do
       Ably::Internal.create_realtime_client(client_options)
@@ -63,7 +63,7 @@ describe Ably::PubSub::Realtime::Push::Admin, :event_machine do
       end
 
       context 'invalid recipient' do
-        let(:default_options) { { key: api_key, environment: environment, protocol: protocol, log_level: :fatal } }
+        let(:default_options) { { key: api_key, endpoint: endpoint, protocol: protocol, log_level: :fatal } }
 
         it 'raises an error after receiving a 40x realtime response' do
           subject.publish({ invalid_recipient_details: 'foo.bar' }, basic_notification_payload).errback do |error|
@@ -74,7 +74,7 @@ describe Ably::PubSub::Realtime::Push::Admin, :event_machine do
       end
 
       context 'invalid push data' do
-        let(:default_options) { { key: api_key, environment: environment, protocol: protocol, log_level: :fatal } }
+        let(:default_options) { { key: api_key, endpoint: endpoint, protocol: protocol, log_level: :fatal } }
 
         it 'raises an error after receiving a 40x realtime response' do
           subject.publish(basic_recipient, { invalid_property_only: true }).errback do |error|
@@ -102,7 +102,7 @@ describe Ably::PubSub::Realtime::Push::Admin, :event_machine do
         end
 
         let!(:publish_stub) do
-          stub_request(:post, "#{client.rest_client.endpoint}/push/publish").
+          stub_request(:post, "#{client.rest_client.uri}/push/publish").
             with do |request|
               expect(deserialize_body(request.body, protocol)['recipient']['camelCase']['secondLevelCamelCase']).to eql('val')
               expect(deserialize_body(request.body, protocol)['recipient']).to_not have_key('camel_case')
@@ -135,7 +135,7 @@ describe Ably::PubSub::Realtime::Push::Admin, :event_machine do
             'transportType' => 'ablyChannel',
             'channel' => channel,
             'ablyKey' => api_key,
-            'ablyUrl' => client.rest_client.endpoint.to_s
+            'ablyUrl' => client.rest_client.uri.to_s
           }
         end
         let(:notification_payload) do

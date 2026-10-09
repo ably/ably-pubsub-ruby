@@ -2,7 +2,7 @@ require 'spec_helper'
 require 'shared/protocol_msgbus_behaviour'
 
 describe Ably::PubSub::Realtime::Connection do
-  let(:client) { instance_double('Ably::PubSub::Realtime::Client', logger: double('logger').as_null_object, recover: nil, endpoint: double('endpoint', host: 'realtime.ably.io')) }
+  let(:client) { instance_double('Ably::PubSub::Realtime::Client', logger: double('logger').as_null_object, recover: nil, uri: double('uri', hostname: 'main.realtime.ably.net')) }
 
   subject do
     Ably::PubSub::Realtime::Connection.new(client, {}).tap do |connection|

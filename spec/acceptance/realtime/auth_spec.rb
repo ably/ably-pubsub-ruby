@@ -14,7 +14,7 @@ describe Ably::PubSub::Realtime::Auth, :event_machine do
   end
 
   vary_by_protocol do
-    let(:default_options) { { key: api_key, environment: environment, protocol: protocol } }
+    let(:default_options) { { key: api_key, endpoint: endpoint, protocol: protocol } }
     let(:client_options)  { default_options }
     let(:client)          { auto_close Ably::Internal.create_realtime_client(client_options) }
     let(:auth)            { client.auth }
@@ -1116,7 +1116,7 @@ describe Ably::PubSub::Realtime::Auth, :event_machine do
       end
 
       context 'when the client is initialized with ClientOptions and the token is a JWT token' do
-        let(:client_options) { { token: token, environment: environment, protocol: protocol } }
+        let(:client_options) { { token: token, endpoint: endpoint, protocol: protocol } }
 
         context 'when credentials are valid' do
           let(:token) { Faraday.get("#{auth_url}?keyName=#{key_name}&keySecret=#{key_secret}").body }
@@ -1134,7 +1134,7 @@ describe Ably::PubSub::Realtime::Auth, :event_machine do
         context 'when credentials are invalid' do
           let(:key_secret) { 'invalid' }
           let(:token) { Faraday.get("#{auth_url}?keyName=#{key_name}&keySecret=#{key_secret}").body }
-          let(:client_options) { { token: token, environment: environment, protocol: protocol, log_level: :none } }
+          let(:client_options) { { token: token, endpoint: endpoint, protocol: protocol, log_level: :none } }
 
           it 'fails with an invalid signature error' do
             client.connection.once(:disconnected) do |state_change|

@@ -18,7 +18,7 @@ describe Ably::PubSub::Realtime::Channels, :event_machine do
 
   vary_by_protocol do
     let(:client_options) do
-      { key: api_key, environment: environment, protocol: protocol }
+      { key: api_key, endpoint: endpoint, protocol: protocol }
     end
     let(:client) do
       auto_close Ably::Internal.create_realtime_client(client_options)

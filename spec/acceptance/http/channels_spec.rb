@@ -15,7 +15,7 @@ describe Ably::PubSub::Http::Channels do
 
   vary_by_protocol do
     let(:client) do
-      Ably::Internal.create_http_client(key: api_key, environment: environment, protocol: protocol)
+      Ably::Internal.create_http_client(key: api_key, endpoint: endpoint, protocol: protocol)
     end
     let(:channel_name) { random_str }
     let(:options)      { { key: 'value' } }

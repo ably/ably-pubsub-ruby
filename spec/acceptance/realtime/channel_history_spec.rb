@@ -3,7 +3,7 @@ require 'spec_helper'
 
 describe Ably::PubSub::Realtime::Channel, '#history', :event_machine do
   vary_by_protocol do
-    let(:default_options) { options.merge(key: api_key, environment: environment, protocol: protocol) }
+    let(:default_options) { options.merge(key: api_key, endpoint: endpoint, protocol: protocol) }
 
     let(:client)       { auto_close Ably::Internal.create_realtime_client(default_options) }
     let(:channel)      { client.channel(channel_name) }

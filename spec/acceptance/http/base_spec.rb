@@ -14,7 +14,7 @@ describe Ably::PubSub::Http do
     let(:body_value) { [as_since_epoch(now)] }
 
     before do
-      stub_request(:get, "#{client.endpoint}/time").
+      stub_request(:get, "#{client.uri}/time").
         with(:headers => { 'Accept' => mime }).
         to_return(:status => 200, :body => request_body, :headers => { 'Content-Type' => mime })
     end
@@ -67,13 +67,13 @@ describe Ably::PubSub::Http do
 
   vary_by_protocol do
     let(:client) do
-      Ably::Internal.create_http_client(key: api_key, environment: environment, protocol: protocol, log_retries_as_info: true)
+      Ably::Internal.create_http_client(key: api_key, endpoint: endpoint, protocol: protocol, log_retries_as_info: true)
     end
 
     describe 'failed requests' do
       context 'due to invalid Auth' do
         it 'should raise an UnauthorizedRequest exception with a valid error message and code' do
-          invalid_client = Ably::Internal.create_http_client(key: 'appid.keyuid:keysecret', environment: environment)
+          invalid_client = Ably::Internal.create_http_client(key: 'appid.keyuid:keysecret', endpoint: endpoint)
           expect { invalid_client.channel('test').publish('foo', 'choo') }.to raise_error do |error|
             expect(error).to be_a(Ably::Exceptions::UnauthorizedRequest)
             expect(error.code).to eql(40101)
@@ -86,7 +86,7 @@ describe Ably::PubSub::Http do
         let(:error_response) { '{ "error": { "statusCode": 500, "code": 50000, "message": "Internal error" } }' }
 
         before do
-          (client.fallback_hosts.map { |host| "https://#{host}" } + [client.endpoint]).each do |host|
+          (client.fallback_hosts.map { |host| "https://#{host}" } + [client.uri]).each do |host|
             stub_request(:get, "#{host}/time")
               .to_return(:status => 500, :body => error_response, :headers => { 'Content-Type' => 'application/json' })
           end
@@ -99,7 +99,7 @@ describe Ably::PubSub::Http do
 
       describe '500 server error without a valid JSON response body', :webmock do
         before do
-          (client.fallback_hosts.map { |host| "https://#{host}" } + [client.endpoint]).each do |host|
+          (client.fallback_hosts.map { |host| "https://#{host}" } + [client.uri]).each do |host|
             stub_request(:get, "#{host}/time").
             to_return(:status => 500, :headers => { 'Content-Type' => 'application/json' })
           end
@@ -120,7 +120,7 @@ describe Ably::PubSub::Http do
         @token_requests = 0
         @publish_attempts = 0
 
-        stub_request(:post, "#{client.endpoint}/keys/#{key_name}/requestToken").to_return do
+        stub_request(:post, "#{client.uri}/keys/#{key_name}/requestToken").to_return do
           @token_requests += 1
           {
             :body => public_send("token_#{@token_requests}").merge(expires: (Time.now.to_i + 60) * 1000).to_json,
@@ -128,7 +128,7 @@ describe Ably::PubSub::Http do
           }
         end
 
-        stub_request(:post, "#{client.endpoint}/channels/#{channel}/publish").to_return do
+        stub_request(:post, "#{client.uri}/channels/#{channel}/publish").to_return do
           @publish_attempts += 1
           if [1, 3].include?(@publish_attempts)
             { status: 201, :body => '[]', :headers => { 'Content-Type' => 'application/json' } }
@@ -156,7 +156,7 @@ describe Ably::PubSub::Http do
       end
 
       context 'when NOT auth#token_renewable?' do
-        let(:client) { Ably::Internal.create_http_client(token: 'token ID cannot be used to create a new token', environment: environment, protocol: protocol) }
+        let(:client) { Ably::Internal.create_http_client(token: 'token ID cannot be used to create a new token', endpoint: endpoint, protocol: protocol) }
 
         it 'should raise an TokenExpired exception' do
           client.channel(channel).publish('evt', 'msg')

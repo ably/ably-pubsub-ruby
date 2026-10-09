@@ -174,7 +174,7 @@ module Ably
           @state         = STATE(state_machine.current_state)
           @manager       = ConnectionManager.new(self)
 
-          @current_host = client.endpoint.host
+          @current_host = client.uri.hostname
 
           reset_client_msg_serial
         end
@@ -395,14 +395,14 @@ module Ably
           if should_use_fallback_hosts?
             internet_up? do |internet_is_up_result|
               @current_host = if internet_is_up_result
-                client.fallback_endpoint.host
+                client.fallback_endpoint.hostname
               else
-                client.endpoint.host
+                client.uri.hostname
               end
               yield current_host
             end
           else
-            @current_host = client.endpoint.host
+            @current_host = client.uri.hostname
             yield current_host
           end
         end
@@ -497,8 +497,8 @@ module Ably
                   end
                 end
 
-                url = URI(client.endpoint).tap do |endpoint|
-                  endpoint.query = URI.encode_www_form(url_params)
+                url = URI(client.uri).tap do |uri|
+                  uri.query = URI.encode_www_form(url_params)
                 end
 
                 determine_host do |host|
@@ -656,22 +656,6 @@ module Ably
           else
             true
           end
-        end
-
-        def production?
-          client.environment.nil? || client.environment == :production
-        end
-
-        def custom_port?
-          if client.use_tls?
-            !!client.custom_tls_port
-          else
-            !!client.custom_port
-          end
-        end
-
-        def custom_host?
-          !!client.custom_realtime_host
         end
 
         def should_use_fallback_hosts?

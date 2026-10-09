@@ -6,7 +6,7 @@ require 'securerandom'
 
 describe 'Ably::PubSub::Realtime::Channel Message', :event_machine do
   vary_by_protocol do
-    let(:default_options) { options.merge(key: api_key, environment: environment, protocol: protocol) }
+    let(:default_options) { options.merge(key: api_key, endpoint: endpoint, protocol: protocol) }
     let(:client_options)  { default_options }
     let(:client) do
       auto_close Ably::Internal.create_realtime_client(client_options)
@@ -398,7 +398,7 @@ describe 'Ably::PubSub::Realtime::Channel Message', :event_machine do
 
     context 'without suitable publishing permissions' do
       let(:restricted_client) do
-        auto_close Ably::Internal.create_realtime_client(options.merge(key: restricted_api_key, environment: environment, protocol: protocol, :log_level => :error))
+        auto_close Ably::Internal.create_realtime_client(options.merge(key: restricted_api_key, endpoint: endpoint, protocol: protocol, :log_level => :error))
       end
       let(:restricted_channel) { restricted_client.channel("cansubscribe:example") }
       let(:payload)            { 'Test message without permission to publish' }
@@ -774,8 +774,8 @@ describe 'Ably::PubSub::Realtime::Channel Message', :event_machine do
               if protocol_message.messages.find { |message| message.name == event_name }
                 EventMachine.add_timer(0.0001) do
                   connection.transition_state_machine :suspended
-                  stub_const 'Ably::FALLBACK_HOSTS', []
-                  allow(client).to receive(:endpoint).and_return(URI::Generic.build(scheme: 'wss', host: 'does.not.exist.com'))
+                  allow(client).to receive(:fallback_hosts).and_return([])
+                  allow(client).to receive(:uri).and_return(URI::Generic.build(scheme: 'wss', host: 'does.not.exist.com'))
                 end
               end
             end
@@ -820,7 +820,7 @@ describe 'Ably::PubSub::Realtime::Channel Message', :event_machine do
   end
 
   context 'message encoding interoperability' do
-    let(:client_options)  { { key: api_key, environment: environment, protocol: :json } }
+    let(:client_options)  { { key: api_key, endpoint: endpoint, protocol: :json } }
     let(:channel_name) { "subscribe_send_text-#{random_str}" }
 
     fixtures_path = File.expand_path('../../../../core/lib/submodules/ably-common/test-resources/messages-encoding.json', __FILE__)

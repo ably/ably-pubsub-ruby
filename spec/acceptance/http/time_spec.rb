@@ -3,7 +3,7 @@ require 'spec_helper'
 describe Ably::PubSub::Http::Client, '#time' do
   vary_by_protocol do
     let(:client) do
-      Ably::Internal.create_http_client(key: api_key, environment: environment, protocol: protocol)
+      Ably::Internal.create_http_client(key: api_key, endpoint: endpoint, protocol: protocol)
     end
 
     describe 'fetching the service time' do
@@ -13,7 +13,7 @@ describe Ably::PubSub::Http::Client, '#time' do
 
       context 'with reconfigured HTTP timeout' do
         let(:client) do
-          Ably::Internal.create_http_client(http_request_timeout: 0.0001, key: api_key, environment: environment, protocol: protocol, log_retries_as_info: true)
+          Ably::Internal.create_http_client(http_request_timeout: 0.0001, key: api_key, endpoint: endpoint, protocol: protocol, log_retries_as_info: true)
         end
 
         it 'should raise a timeout exception' do

@@ -5,7 +5,7 @@ describe Ably::PubSub::Realtime::Presence, :event_machine do
   include Ably::Modules::Conversions
 
   vary_by_protocol do
-    let(:default_options) { { key: api_key, environment: environment, protocol: protocol } }
+    let(:default_options) { { key: api_key, endpoint: endpoint, protocol: protocol } }
     let(:client_options)  { default_options }
 
     let(:anonymous_client) { auto_close Ably::Internal.create_realtime_client(client_options) }

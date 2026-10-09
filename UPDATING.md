@@ -78,6 +78,58 @@ Ably::PubSub::Realtime::Connection::STATE.Connected
 
 `Ably::Rest` and `Ably::Realtime` raise `NameError` in 2.0.
 
+### Connection options: `endpoint`
+
+The `:endpoint` option is now the only way to choose where a client connects. The
+`:environment`, `:rest_host`, `:realtime_host` (and its alias `:ws_host`) and
+`:fallback_hosts_use_default` options have been removed and are ignored, so a client that
+still passes them connects to production (`main.realtime.ably.net`).
+
+| 1.x | 2.0 |
+| --- | --- |
+| no host options | no change; traffic moves to `main.realtime.ably.net` |
+| `environment: 'sandbox'` | `endpoint: 'nonprod:sandbox'` |
+| `environment: 'acme'` (dedicated cluster) | `endpoint: 'acme'` |
+| `rest_host:` / `realtime_host: 'localhost'` | `endpoint: 'localhost'` |
+| `rest_host` and `realtime_host` set to the same custom host | `endpoint: '<that host>'` |
+| `rest_host` and `realtime_host` set to different hosts | not supported; use one host that serves both, or contact Ably |
+| `fallback_hosts_use_default: true` | delete it |
+| custom `fallback_hosts` | unchanged |
+
+```ruby
+# 1.x
+client = Ably::Rest::Client.new(key: ENV['ABLY_API_KEY'], environment: 'sandbox')
+
+# 2.0
+client = Ably::PubSub::Server.create_http_client(key: ENV['ABLY_API_KEY'], endpoint: 'nonprod:sandbox')
+```
+
+REST requests and the realtime connection now use the same primary domain:
+
+| `endpoint` | Primary domain | Default fallback hosts |
+| --- | --- | --- |
+| unset | `main.realtime.ably.net` | `main.[a-e].fallback.ably-realtime.com` |
+| `'acme'` | `acme.realtime.ably.net` | `acme.[a-e].fallback.ably-realtime.com` |
+| `'nonprod:sandbox'` | `sandbox.realtime.ably-nonprod.net` | `sandbox.[a-e].fallback.ably-realtime-nonprod.com` |
+| a hostname, such as `'localhost'`, `'127.0.0.1'` or `'ably.example.com'` | the hostname | none |
+
+A custom `port` or `tls_port` no longer disables the default fallback hosts; pass
+`fallback_hosts: []` to disable them.
+
+Firewall allowlists and proxies must allow `*.realtime.ably.net` and
+`*.fallback.ably-realtime.com` in place of `rest.ably.io`, `realtime.ably.io` and
+`*.ably-realtime.com`.
+
+Related client attributes:
+
+| 1.x | 2.0 |
+| --- | --- |
+| `client.endpoint` (a `URI`) | `client.uri`; `client.endpoint` now returns the `:endpoint` option |
+| `client.environment` | `client.endpoint` |
+| `client.custom_host`, `realtime_client.custom_realtime_host` | `client.primary_domain` |
+| `Ably::PubSub::Http::Client::DOMAIN`, `Ably::PubSub::Realtime::Client::DOMAIN` | `client.primary_domain` |
+| `Ably::CUSTOM_ENVIRONMENT_FALLBACKS_SUFFIXES` | removed |
+
 ### Unchanged
 
 Everything after construction:

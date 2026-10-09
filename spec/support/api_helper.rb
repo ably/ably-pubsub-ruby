@@ -21,8 +21,8 @@ module ApiHelper
     TestApp.instance.restricted_api_key
   end
 
-  def environment
-    TestApp.instance.environment
+  def endpoint
+    TestApp.instance.endpoint
   end
 
   def reload_test_app
