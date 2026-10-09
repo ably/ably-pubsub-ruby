@@ -5,7 +5,7 @@ describe Ably::PubSub::Http::Push::Admin do
   include Ably::Modules::Conversions
 
   vary_by_protocol do
-    let(:default_options) { { key: api_key, environment: environment, protocol: protocol} }
+    let(:default_options) { { key: api_key, endpoint: endpoint, protocol: protocol} }
     let(:client_options)  { default_options }
     let(:client) do
       Ably::Internal.create_http_client(client_options)
@@ -90,7 +90,7 @@ describe Ably::PubSub::Http::Push::Admin do
         end
 
         let!(:publish_stub) do
-          stub_request(:post, "#{client.endpoint}/push/publish").
+          stub_request(:post, "#{client.uri}/push/publish").
             with do |request|
               expect(deserialize_body(request.body, protocol)['recipient']['camelCase']['secondLevelCamelCase']).to eql('val')
               expect(deserialize_body(request.body, protocol)['recipient']).to_not have_key('camel_case')
@@ -119,7 +119,7 @@ describe Ably::PubSub::Http::Push::Admin do
             'transportType' => 'ablyChannel',
             'channel' => channel,
             'ablyKey' => api_key,
-            'ablyUrl' => client.endpoint.to_s
+            'ablyUrl' => client.uri.to_s
           }
         end
         let(:notification_payload) do

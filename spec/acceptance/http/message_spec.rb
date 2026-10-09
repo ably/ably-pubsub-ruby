@@ -7,7 +7,7 @@ describe Ably::PubSub::Http::Channel, 'messages' do
   include Ably::Modules::Conversions
 
   vary_by_protocol do
-    let(:default_client_options) { { key: api_key, environment: environment, protocol: protocol } }
+    let(:default_client_options) { { key: api_key, endpoint: endpoint, protocol: protocol } }
     let(:client_options)         { default_client_options }
     let(:client)                 { Ably::Internal.create_http_client(client_options) }
     let(:other_client)           { Ably::Internal.create_http_client(client_options) }
@@ -220,7 +220,7 @@ describe Ably::PubSub::Http::Channel, 'messages' do
       end
 
       context 'when idempotent publishing is enabled in the client library ClientOptions (#TO3n)' do
-        let(:client_options) { default_client_options.merge(idempotent_rest_publishing: true, log_level: :error, fallback_hosts: ["#{environment}-realtime.ably.io"]) }
+        let(:client_options) { default_client_options.merge(idempotent_rest_publishing: true, log_level: :error, fallback_hosts: [TestApp.instance.host]) }
 
         context 'when there is a network failure triggering an automatic retry (#RSL1k4)' do
           def mock_for_two_publish_failures
