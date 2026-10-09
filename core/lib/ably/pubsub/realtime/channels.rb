@@ -35,17 +35,36 @@ module Ably
           super
         end
 
-        # Detaches the {Ably::PubSub::Realtime::Channel Realtime Channel} and releases all associated resources.
+        # Releases the {Ably::PubSub::Realtime::Channel Realtime Channel} with the given name and all associated resources.
         #
         # Releasing a Realtime Channel is not typically necessary as a channel, once detached, consumes no resources other than
         # the memory footprint of the {Ably::PubSub::Realtime::Channel Realtime Channel object}. Release channels to free up resources if required
         #
+        # A realtime channel can only be released when it is in the +INITIALIZED+, +DETACHED+, or +FAILED+ state.
+        #
+        # @spec RTS4c, RTS4d, RTS4e
+        #
+        # @param channel [String] The name of the channel
+        #
+        # @raise [Ably::Exceptions::InvalidState] if the channel is not in the +INITIALIZED+, +DETACHED+, or +FAILED+ state
+        #
         # @return [void]
         #
         def release(channel)
-          get(channel).detach do
-            @channels.delete(channel)
-          end if @channels.has_key?(channel)
+          return unless @channels.has_key?(channel)
+
+          released_channel = get(channel)
+          unless released_channel.initialized? || released_channel.detached? || released_channel.failed?
+            raise Ably::Exceptions::InvalidState.new(
+              "Can only release a channel in a state where there is no possibility of further updates from the server being received " \
+                "(initialized, detached, or failed). The current state is #{released_channel.state.to_sym}",
+              400,
+              90011
+            )
+          end
+
+          @channels.delete(channel)
+          nil
         end
 
         # Sets channel serial to each channel from given serials hashmap
