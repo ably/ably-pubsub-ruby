@@ -101,7 +101,7 @@ describe Ably::PubSub::Realtime::Channels do
     let(:released_channel) { subject.get(channel_name, options) }
 
     def stub_state(state)
-      allow(released_channel).to receive(:state).and_return(Ably::Realtime::Channel::STATE(state))
+      allow(released_channel).to receive(:state).and_return(Ably::PubSub::Realtime::Channel::STATE(state))
     end
 
     it '#release does nothing if the channel does not exist (RTS4c)' do
@@ -110,24 +110,24 @@ describe Ably::PubSub::Realtime::Channels do
     end
 
     [:initialized, :detached, :failed].each do |state|
-      it "#release releases a channel in the #{state} state without detaching or logging a warning (RTS4d)" do
+      it "#release releases a channel in the #{state} state without detaching (RTS4d)" do
         stub_state state
         expect(released_channel).to_not receive(:detach)
-        expect(client.logger).to_not receive(:warn)
         subject.release(channel_name)
         expect(subject.fetch(channel_name) { nil }).to be_nil
       end
     end
 
     [:attaching, :attached, :detaching, :suspended].each do |state|
-      it "#release logs a deprecation warning, then detaches and releases a channel in the #{state} state (RTS4b)" do
+      it "#release raises 90011 and leaves a channel in the #{state} state untouched (RTS4e)" do
         stub_state state
-        expect(client.logger).to receive(:warn) do |&block|
-          expect(block.call).to match(/release on a channel in the #{state} state is deprecated/)
+        expect(released_channel).to_not receive(:detach)
+        expect { subject.release(channel_name) }.to raise_error(Ably::Exceptions::InvalidState) do |error|
+          expect(error.code).to eql(90011)
+          expect(error.status).to eql(400)
+          expect(error.message).to match(/The current state is #{state}/)
         end
-        expect(released_channel).to receive(:detach).and_yield
-        subject.release(channel_name)
-        expect(subject.get(channel_name, options).object_id).to_not eql(released_channel.object_id)
+        expect(subject.fetch(channel_name)).to equal(released_channel)
       end
     end
   end

@@ -40,12 +40,13 @@ module Ably
         # Releasing a Realtime Channel is not typically necessary as a channel, once detached, consumes no resources other than
         # the memory footprint of the {Ably::PubSub::Realtime::Channel Realtime Channel object}. Release channels to free up resources if required
         #
-        # A realtime channel should only be released when it is in the +INITIALIZED+, +DETACHED+, or +FAILED+ state;
-        # releasing a realtime channel in any other state is deprecated and will raise an error in the next major version.
+        # A realtime channel can only be released when it is in the +INITIALIZED+, +DETACHED+, or +FAILED+ state.
         #
-        # @spec RTS4b, RTS4c, RTS4d
+        # @spec RTS4c, RTS4d, RTS4e
         #
         # @param channel [String] The name of the channel
+        #
+        # @raise [Ably::Exceptions::InvalidState] if the channel is not in the +INITIALIZED+, +DETACHED+, or +FAILED+ state
         #
         # @return [void]
         #
@@ -53,19 +54,17 @@ module Ably
           return unless @channels.has_key?(channel)
 
           released_channel = get(channel)
-          if released_channel.initialized? || released_channel.detached? || released_channel.failed?
-            @channels.delete(channel)
-            return
+          unless released_channel.initialized? || released_channel.detached? || released_channel.failed?
+            raise Ably::Exceptions::InvalidState.new(
+              "Can only release a channel in a state where there is no possibility of further updates from the server being received " \
+                "(initialized, detached, or failed). The current state is #{released_channel.state.to_sym}",
+              400,
+              90011
+            )
           end
 
-          logger.warn do
-            "Channels#release: Calling release on a channel in the #{released_channel.state.to_sym} state is deprecated, " \
-              "and will raise an error in the next major version. " \
-              "Call Channel#detach and wait for it to complete before calling Channels#release"
-          end
-          released_channel.detach do
-            @channels.delete(channel)
-          end
+          @channels.delete(channel)
+          nil
         end
 
         # Sets channel serial to each channel from given serials hashmap

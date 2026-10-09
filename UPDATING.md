@@ -78,6 +78,25 @@ Ably::PubSub::Realtime::Connection::STATE.Connected
 
 `Ably::Rest` and `Ably::Realtime` raise `NameError` in 2.0.
 
+### Releasing realtime channels
+
+In 1.x, `Channels#release` detached a realtime channel before removing it. In 2.0, a realtime channel can only be released
+when it is in the `initialized`, `detached` or `failed` state. Releasing it in any other state raises
+`Ably::Exceptions::InvalidState` with code `90011`, and the channel is left in place. Detach the channel and wait for the
+detach to complete before releasing it:
+
+```ruby
+# 1.x
+client.channels.release('example')
+
+# 2.0
+client.channels.get('example').detach do
+  client.channels.release('example')
+end
+```
+
+`Ably::PubSub::Http::Channels#release` is unchanged.
+
 ### Unchanged
 
 Everything after construction:
