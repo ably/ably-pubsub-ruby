@@ -34,17 +34,37 @@ module Ably
         super
       end
 
-      # Detaches the {Ably::Realtime::Channel Realtime Channel} and releases all associated resources.
+      # Releases the {Ably::Realtime::Channel Realtime Channel} with the given name and all associated resources.
       #
       # Releasing a Realtime Channel is not typically necessary as a channel, once detached, consumes no resources other than
       # the memory footprint of the {Ably::Realtime::Channel Realtime Channel object}. Release channels to free up resources if required
       #
+      # A realtime channel should only be released when it is in the +INITIALIZED+, +DETACHED+, or +FAILED+ state;
+      # releasing a realtime channel in any other state is deprecated and will raise an error in the next major version.
+      #
+      # @spec RTS4b, RTS4c, RTS4d
+      #
+      # @param channel [String] The name of the channel
+      #
       # @return [void]
       #
       def release(channel)
-        get(channel).detach do
+        return unless @channels.has_key?(channel)
+
+        released_channel = get(channel)
+        if released_channel.initialized? || released_channel.detached? || released_channel.failed?
           @channels.delete(channel)
-        end if @channels.has_key?(channel)
+          return
+        end
+
+        logger.warn do
+          "Channels#release: Calling release on a channel in the #{released_channel.state.to_sym} state is deprecated, " \
+            "and will raise an error in the next major version. " \
+            "Call Channel#detach and wait for it to complete before calling Channels#release"
+        end
+        released_channel.detach do
+          @channels.delete(channel)
+        end
       end
 
       # Sets channel serial to each channel from given serials hashmap
