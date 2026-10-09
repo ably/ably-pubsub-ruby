@@ -26,7 +26,7 @@ describe Ably::Auth do
   end
 
   vary_by_protocol do
-    let(:default_options) { { environment: environment, protocol: protocol } }
+    let(:default_options) { { endpoint: endpoint, protocol: protocol } }
     let(:client_options)  { default_options.merge(key: api_key) }
     let(:client) do
       Ably::Internal.create_http_client(client_options)
@@ -61,7 +61,7 @@ describe Ably::Auth do
       end
 
       it 'creates a TokenRequest automatically and sends it to Ably to obtain a token', webmock: true do
-        token_request_stub = stub_request(:post, "#{client.endpoint}/keys/#{key_name}/requestToken").
+        token_request_stub = stub_request(:post, "#{client.uri}/keys/#{key_name}/requestToken").
           to_return(status: 201, body: serialize_body({}, protocol), headers: { 'Content-Type' => content_type })
         expect(auth).to receive(:create_token_request).and_call_original
         auth.request_token
@@ -90,7 +90,7 @@ describe Ably::Auth do
 
           let(:token_response) { {} }
           let!(:request_token_stub) do
-            stub_request(:post, "#{client.endpoint}/keys/#{key_name}/requestToken").
+            stub_request(:post, "#{client.uri}/keys/#{key_name}/requestToken").
               with do |request|
                 request_body_includes(request, protocol, token_param, coerce_if_time_value(token_param, random, multiply: 1000))
               end.to_return(
@@ -121,7 +121,7 @@ describe Ably::Auth do
 
         let(:token_response) { {} }
         let!(:request_token_stub) do
-          stub_request(:post, "#{client.endpoint}/keys/#{key_name}/requestToken").
+          stub_request(:post, "#{client.uri}/keys/#{key_name}/requestToken").
             with do |request|
               request_body_includes(request, protocol, 'mac', mac)
             end.to_return(
@@ -151,7 +151,7 @@ describe Ably::Auth do
 
         let(:token_response) { {} }
         let!(:request_token_stub) do
-          stub_request(:post, "#{client.endpoint}/keys/#{key_name}/requestToken").
+          stub_request(:post, "#{client.uri}/keys/#{key_name}/requestToken").
             with do |request|
               request_body_includes(request, protocol, 'mac', mac)
             end.to_return(
@@ -293,7 +293,7 @@ describe Ably::Auth do
         let(:auth_url_content_type) { 'application/json' }
 
         let!(:request_token_stub) do
-          stub_request(:post, "#{client.endpoint}/keys/#{key_name}/requestToken").
+          stub_request(:post, "#{client.uri}/keys/#{key_name}/requestToken").
             with do |request|
               request_body_includes(request, protocol, 'key_name', key_name)
             end.to_return(
@@ -517,7 +517,7 @@ describe Ably::Auth do
         end
 
         context 'that returns a Token string' do
-          let(:second_client) { Ably::Internal.create_http_client(key: api_key, environment: environment, protocol: protocol) }
+          let(:second_client) { Ably::Internal.create_http_client(key: api_key, endpoint: endpoint, protocol: protocol) }
           let(:token) { second_client.auth.request_token.token }
 
           let!(:token_details) do
@@ -1033,7 +1033,7 @@ describe Ably::Auth do
             auth_callback = lambda do |callback|
               auth.create_token_request(token_attributes)
             end
-            client = Ably::Internal.create_http_client(auth_callback: auth_callback, environment: environment, protocol: protocol)
+            client = Ably::Internal.create_http_client(auth_callback: auth_callback, endpoint: endpoint, protocol: protocol)
             client.auth.authorize
           end
         end
@@ -1053,7 +1053,7 @@ describe Ably::Auth do
         end
         let(:token) { token_details.token }
         let(:token_auth_client) do
-          Ably::Internal.create_http_client(token: token, environment: environment, protocol: protocol)
+          Ably::Internal.create_http_client(token: token, endpoint: endpoint, protocol: protocol)
         end
 
         it 'authenticates successfully using the provided :token' do
@@ -1099,7 +1099,7 @@ describe Ably::Auth do
               }
             }
 
-            stub_request(:post, "https://#{environment}-rest.ably.io/channels/foo/publish").
+            stub_request(:post, "https://#{TestApp.instance.host}/channels/foo/publish").
               to_return(status: 401, body: token_expired.to_json, headers: { 'Content-Type' => 'application/json' })
           end
 
@@ -1158,7 +1158,7 @@ describe Ably::Auth do
           sleep 2.5
           WebMock.enable!
           WebMock.disable_net_connect!
-          stub_request(:post, "https://#{environment}-rest.ably.io/keys/#{TestApp.instance.key_name}/requestToken").
+          stub_request(:post, "https://#{TestApp.instance.host}/keys/#{TestApp.instance.key_name}/requestToken").
               to_return(status: 401, body: token_expired_response.to_json, headers: { 'Content-Type' => 'application/json' })
           expect { channel.publish 'event' }.to raise_error Ably::Exceptions::TokenExpired
           expect(auth.current_token_details).to eql(token)
@@ -1186,10 +1186,10 @@ describe Ably::Auth do
       context 'when :client_id is provided in a token' do
         let(:client_id) { '123' }
         let(:token) do
-          Ably::Internal.create_http_client(key: api_key, environment: environment, protocol: protocol).auth.request_token(client_id: client_id)
+          Ably::Internal.create_http_client(key: api_key, endpoint: endpoint, protocol: protocol).auth.request_token(client_id: client_id)
         end
         let(:client) do
-          Ably::Internal.create_http_client(token: token, environment: environment, protocol: protocol)
+          Ably::Internal.create_http_client(token: token, endpoint: endpoint, protocol: protocol)
         end
 
         specify '#client_id contains the client_id' do
@@ -1293,7 +1293,7 @@ describe Ably::Auth do
     context 'when using JWT' do
       let(:auth_url) { 'https://echo.ably.io/createJWT' }
       let(:token) { Faraday.get("#{auth_url}?keyName=#{key_name}&keySecret=#{key_secret}").body }
-      let(:client) { Ably::Internal.create_http_client(token: token, environment: environment, protocol: protocol) }
+      let(:client) { Ably::Internal.create_http_client(token: token, endpoint: endpoint, protocol: protocol) }
 
       it 'authenticates correctly using the JWT token generated by the echo server' do
         expect(client.stats).to_not be_nil()

@@ -19,9 +19,6 @@ module Ably
         extend Forwardable
         using Ably::Util::AblyExtensions
 
-        # Default Ably domain for REST
-        DOMAIN = 'rest.ably.io'
-
         MAX_MESSAGE_SIZE = 65536 # See spec TO3l8
         MAX_FRAME_SIZE = 524288 # See spec TO3l8
 
@@ -44,9 +41,15 @@ module Ably
 
         def_delegators :auth, :client_id, :auth_options
 
-        # Custom environment to use such as 'sandbox' when testing the client library against an alternate Ably environment
+        # The +:endpoint+ client option: a routing policy name such as +main+, a +nonprod:[id]+ routing policy, or a hostname
+        # @spec REC1
         # @return [String]
-        attr_reader :environment
+        attr_reader :endpoint
+
+        # The domain that REST requests and realtime connections are sent to, derived from {#endpoint}
+        # @spec REC1b
+        # @return [String]
+        attr_reader :primary_domain
 
         # The protocol configured for this client, either binary `:msgpack` or text based `:json`
         # @return [Symbol]
@@ -69,10 +72,6 @@ module Ably
         # Log level configured for this {Client}
         # @return [Logger::Severity]
         attr_reader :log_level
-
-        # The custom host that is being used if it was provided with the option +:rest_host+ when the {Client} was created
-        # @return [String,Nil]
-        attr_reader :custom_host
 
         # The custom port for non-TLS requests if it was provided with the option +:port+ when the {Client} was created
         # @return [Integer,Nil]
@@ -147,7 +146,7 @@ module Ably
         # @option options [String]                  :token               Token string or {Models::TokenDetails} used to authenticate requests
         # @option options [String]                  :token_details       {Models::TokenDetails} used to authenticate requests
         # @option options [Boolean]                 :use_token_auth      Will force Basic Auth if set to false, and Token auth if set to true
-        # @option options [String]                  :environment         Specify 'sandbox' when testing the client library against an alternate Ably environment
+        # @option options [String]                  :endpoint            ('main') A routing policy name such as 'main', a non-production routing policy such as 'nonprod:sandbox', or a hostname such as 'localhost'
         # @option options [Symbol]                  :protocol            (:msgpack) Protocol used to communicate with Ably, :json and :msgpack currently supported
         # @option options [Boolean]                 :use_binary_protocol (true) When true will use the MessagePack binary protocol, when false it will use JSON encoding. This option will overide :protocol option
         # @option options [Logger::Severity,Symbol] :log_level           (Logger::WARN) Log level for the standard Logger that outputs to STDOUT. Can be set to :fatal (Logger::FATAL), :error (Logger::ERROR), :warn (Logger::WARN), :info (Logger::INFO), :debug (Logger::DEBUG) or :none
@@ -167,8 +166,8 @@ module Ably
         # @option options [Integer]                 :http_max_retry_count    (3) maximum number of fallback host retries for HTTP requests that fail due to network issues or server problems
         # @option options [Integer]                 :http_max_retry_duration (15 seconds) maximum elapsed time in which fallback host retries for HTTP requests will be attempted i.e. if the first default host attempt takes 5s, and then the subsequent fallback retry attempt takes 7s, no further fallback host attempts will be made as the total elapsed time of 12s exceeds the default 10s limit
         #
-        # @option options [Boolean]                 :fallback_hosts_use_default  (false) When true, forces the user of fallback hosts even if a non-default production endpoint is being used
-        # @option options [Array<String>]           :fallback_hosts              When an array of fallback hosts are provided, these fallback hosts are always used if a request fails to the primary endpoint. If an empty array is provided, the fallback host functionality is disabled
+        # @option options [Array<String>]           :fallback_hosts              When an array of fallback hosts are provided, these fallback hosts are always used if a request fails to the primary domain. If an empty array is provided, the fallback host functionality is disabled.
+        #                                                                         When not provided, fallback hosts are derived from +:endpoint+, and none are used if +:endpoint+ is a hostname
         # @option options [Integer]                 :fallback_retry_timeout     (600 seconds) amount of time in seconds a REST client will continue to use a working fallback host when the primary fallback host has previously failed
         #
         # @option options [Boolean]                 :add_request_ids             (false) When true, adds a unique request_id to each request sent to Ably servers. This is handy when reporting issues, because you can refer to a specific request.
@@ -209,14 +208,14 @@ module Ably
             @agent = "#{@agent} #{version ? "#{identifier}/#{version}" : identifier}"
           end
           @realtime_client     = options.delete(:realtime_client)
+
+          @endpoint            = (options.delete(:endpoint) || Ably::ENDPOINT).to_s
+          @primary_domain      = Ably::Internal.primary_domain(endpoint)
           @tls                 = options.delete_with_default(:tls, true)
-          @environment         = options.delete(:environment) # nil is production
-          @environment         = nil if [:production, 'production'].include?(@environment)
           @protocol            = options.delete(:protocol) || :msgpack
           @debug_http          = options.delete(:debug_http)
           @log_level           = options.delete(:log_level) || ::Logger::WARN
           @custom_logger       = options.delete(:logger)
-          @custom_host         = options.delete(:rest_host)
           @custom_port         = options.delete(:port)
           @custom_tls_port     = options.delete(:tls_port)
           @add_request_ids     = options.delete(:add_request_ids)
@@ -225,21 +224,8 @@ module Ably
           @max_frame_size      = options.delete(:max_frame_size) || MAX_FRAME_SIZE
           @idempotent_rest_publishing = options.delete_with_default(:idempotent_rest_publishing, true)
 
-          if options[:fallback_hosts_use_default] && options[:fallback_hosts]
-            raise ArgumentError, "fallback_hosts_use_default cannot be set to try when fallback_hosts is also provided"
-          end
-          @fallback_hosts = case
-          when options.delete(:fallback_hosts_use_default)
-            Ably::FALLBACK_HOSTS
-          when options_fallback_hosts = options.delete(:fallback_hosts)
-            options_fallback_hosts
-          when custom_host || options[:realtime_host] || custom_port || custom_tls_port
-            []
-          when environment
-            CUSTOM_ENVIRONMENT_FALLBACKS_SUFFIXES.map { |host| "#{environment}#{host}" }
-          else
-            Ably::FALLBACK_HOSTS
-          end
+          # REC2a2, REC2c
+          @fallback_hosts = options.delete(:fallback_hosts) || Ably::Internal.fallback_domains(endpoint)
 
           options[:fallback_retry_timeout] ||= FALLBACK_RETRY_TIMEOUT
 
@@ -448,10 +434,10 @@ module Ably
           @push ||= Push.new(self)
         end
 
-        # @!attribute [r] endpoint
-        # @return [URI::Generic] Default Ably REST endpoint used for all requests
-        def endpoint
-          endpoint_for_host(custom_host || [@environment, DOMAIN].compact.join('-'))
+        # @!attribute [r] uri
+        # @return [URI::Generic] Ably REST URI for the {#primary_domain}, used for all requests unless a fallback host is in use
+        def uri
+          uri_for_host(primary_domain)
         end
 
         # @!attribute [r] logger
@@ -502,7 +488,7 @@ module Ably
           if options[:use_fallback]
             fallback_connection
           else
-            @connection ||= Faraday.new(endpoint.to_s, connection_options)
+            @connection ||= Faraday.new(uri.to_s, connection_options)
           end
         end
 
@@ -515,7 +501,7 @@ module Ably
         # @api private
         def fallback_connection
           unless defined?(@fallback_connections) && @fallback_connections
-            @fallback_connections = fallback_hosts.shuffle.map { |host| Faraday.new(endpoint_for_host(host).to_s, connection_options) }
+            @fallback_connections = fallback_hosts.shuffle.map { |host| Faraday.new(uri_for_host(host).to_s, connection_options) }
           end
           @fallback_index ||= 0
 
@@ -675,7 +661,7 @@ module Ably
           end
         end
 
-        def endpoint_for_host(host)
+        def uri_for_host(host)
           port = if use_tls?
             custom_tls_port
           else

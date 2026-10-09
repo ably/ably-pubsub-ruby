@@ -36,10 +36,10 @@ describe Ably::PubSub::Server do
     end
 
     context 'with an options hash' do
-      subject(:client) { Ably::PubSub::Server.create_http_client(key: api_key, environment: 'sandbox') }
+      subject(:client) { Ably::PubSub::Server.create_http_client(key: api_key, endpoint: 'nonprod:sandbox') }
 
       it 'passes the options through and stamps the side' do
-        expect(client.environment).to eql('sandbox')
+        expect(client.endpoint).to eql('nonprod:sandbox')
         expect(client.agent).to end_with(side_entry)
       end
     end

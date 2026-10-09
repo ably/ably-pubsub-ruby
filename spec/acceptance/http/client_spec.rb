@@ -4,7 +4,7 @@ require 'webrick'
 
 describe Ably::PubSub::Http::Client do
   vary_by_protocol do
-    let(:default_options) { { environment: environment, protocol: protocol, log_retries_as_info: true } }
+    let(:default_options) { { endpoint: endpoint, protocol: protocol, log_retries_as_info: true } }
     let(:client_options)  { default_options }
 
     let(:client) { Ably::Internal.create_http_client(client_options) }
@@ -139,7 +139,7 @@ describe Ably::PubSub::Http::Client do
           let(:client_options)      { default_options.merge(key: api_key, client_id: client_id) }
 
           let!(:get_message_history_stub) do
-            stub_request(:get, "https://#{environment}-#{Ably::PubSub::Http::Client::DOMAIN}/channels/#{channel_name}/messages?#{history_querystring}")
+            stub_request(:get, "https://#{client.primary_domain}/channels/#{channel_name}/messages?#{history_querystring}")
               .with(headers: { 'X-Ably-ClientId' => encode64(client_id) })
               .to_return(body: [], headers: { 'Content-Type' => 'application/json' })
           end
@@ -155,7 +155,7 @@ describe Ably::PubSub::Http::Client do
           let(:client_options) { default_options.merge(token: token_string) }
 
           let!(:get_message_history_stub) do
-            stub_request(:get, "#{http_protocol}://#{environment}-#{Ably::PubSub::Http::Client::DOMAIN}/channels/#{channel_name}/messages?#{history_querystring}").
+            stub_request(:get, "#{http_protocol}://#{client.primary_domain}/channels/#{channel_name}/messages?#{history_querystring}").
               with(headers: { 'Authorization' => "Bearer #{encode64(token_string)}" }).
               to_return(body: [], headers: { 'Content-Type' => 'application/json' })
           end
@@ -244,7 +244,7 @@ describe Ably::PubSub::Http::Client do
 
     context 'connection transport' do
       context 'defaults' do
-        let(:client_options) { default_options.merge(key: api_key, environment: 'production') }
+        let(:client_options) { default_options.merge(key: api_key) }
 
         context 'for default host' do
           it "is configured to timeout connection opening in #{http_defaults.fetch(:open_timeout)} seconds" do
@@ -270,7 +270,7 @@ describe Ably::PubSub::Http::Client do
       context 'with custom http_open_timeout and http_request_timeout options' do
         let(:http_open_timeout)    { 999 }
         let(:http_request_timeout) { 666 }
-        let(:client_options)       { default_options.merge(key: api_key, http_open_timeout: http_open_timeout, http_request_timeout: http_request_timeout, environment: 'production') }
+        let(:client_options)       { default_options.merge(key: api_key, http_open_timeout: http_open_timeout, http_request_timeout: http_request_timeout) }
 
         context 'for default host' do
           it 'is configured to use custom open timeout' do
@@ -299,22 +299,22 @@ describe Ably::PubSub::Http::Client do
       let(:publish_block)  { lambda { client.channel('test').publish('event', 'data') } }
 
       context 'configured' do
-        let(:client_options) { default_options.merge(key: api_key, environment: 'production') }
+        let(:client_options) { default_options.merge(key: api_key, endpoint: Ably::ENDPOINT) }
 
-        it 'should make connection attempts to a.ably-realtime.com, b.ably-realtime.com, c.ably-realtime.com, d.ably-realtime.com, e.ably-realtime.com (#RSC15a)' do
+        it 'should make connection attempts to main.a.fallback.ably-realtime.com ... main.e.fallback.ably-realtime.com (#RSC15a, #REC2c1)' do
           hosts = []
           5.times do
             hosts << client.fallback_connection.host
           end
-          expect(hosts).to match_array(%w(a.ably-realtime.com b.ably-realtime.com c.ably-realtime.com d.ably-realtime.com e.ably-realtime.com))
+          expect(hosts).to match_array(%w(a b c d e).map { |id| "main.#{id}.fallback.ably-realtime.com" })
         end
       end
 
-      context 'when environment is NOT production (#RSC15b)' do
+      context 'when endpoint is a nonprod routing policy (#RSC15b)' do
         context 'and custom fallback hosts are empty' do
-          let(:client_options) { default_options.merge(environment: 'sandbox', key: api_key, fallback_hosts: []) }
+          let(:client_options) { default_options.merge(endpoint: 'nonprod:sandbox', key: api_key, fallback_hosts: []) }
           let!(:default_host_request_stub) do
-            stub_request(:post, "https://#{environment}-#{Ably::PubSub::Http::Client::DOMAIN}#{path}").to_return do
+            stub_request(:post, "https://sandbox.realtime.ably-nonprod.net#{path}").to_return do
               raise Faraday::TimeoutError.new('timeout error message')
             end
           end
@@ -325,35 +325,32 @@ describe Ably::PubSub::Http::Client do
         end
 
         context 'and no custom fallback hosts are provided' do
-          let(:client_options) { default_options.merge(environment: 'sandbox', key: api_key) }
+          let(:client_options) { default_options.merge(endpoint: 'nonprod:sandbox', key: api_key) }
 
-          it 'should make connection attempts to sandbox-a-fallback.ably-realtime.com, sandbox-b-fallback.ably-realtime.com, sandbox-c-fallback.ably-realtime.com, sandbox-d-fallback.ably-realtime.com, sandbox-e-fallback.ably-realtime.com (#RSC15a)' do
+          it 'should make connection attempts to sandbox.a.fallback.ably-realtime-nonprod.com ... sandbox.e.fallback.ably-realtime-nonprod.com (#RSC15a, #REC2c3)' do
             hosts = []
             5.times do
               hosts << client.fallback_connection.host
             end
-            expect(hosts).to match_array(%w(a b c d e).map { |id| "sandbox-#{id}-fallback.ably-realtime.com" })
+            expect(hosts).to match_array(%w(a b c d e).map { |id| "sandbox.#{id}.fallback.ably-realtime-nonprod.com" })
           end
         end
       end
 
-      context 'when environment is production' do
-        let(:custom_hosts)       { %w(a.ably-realtime.com b.ably-realtime.com) }
+      context 'when endpoint is the default production routing policy' do
+        let(:custom_hosts)       { Ably::FALLBACK_HOSTS[0...2] }
         let(:max_retry_count)    { 2 }
         let(:max_retry_duration) { 0.5 }
         let(:fallback_block)     { proc { raise Faraday::SSLError.new('ssl error message') } }
         let(:client_options) do
           default_options.merge(
-            environment: nil,
+            endpoint: Ably::ENDPOINT,
+            fallback_hosts: custom_hosts,
             key: api_key,
             http_max_retry_duration: max_retry_duration,
             http_max_retry_count: max_retry_count,
             log_level: :error
           )
-        end
-
-        before do
-          stub_const 'Ably::FALLBACK_HOSTS', custom_hosts
         end
 
         let!(:first_fallback_request_stub) do
@@ -366,7 +363,7 @@ describe Ably::PubSub::Http::Client do
 
         context 'and connection times out' do
           let!(:default_host_request_stub) do
-            stub_request(:post, "https://#{Ably::PubSub::Http::Client::DOMAIN}#{path}").to_return do
+            stub_request(:post, "https://main.realtime.ably.net#{path}").to_return do
               raise Faraday::TimeoutError.new('timeout error message')
             end
           end
@@ -380,7 +377,7 @@ describe Ably::PubSub::Http::Client do
 
           context "and the total request time exeeds #{http_defaults.fetch(:max_retry_duration)} seconds" do
             let!(:default_host_request_stub) do
-              stub_request(:post, "https://#{Ably::PubSub::Http::Client::DOMAIN}#{path}").to_return do
+              stub_request(:post, "https://main.realtime.ably.net#{path}").to_return do
                 sleep max_retry_duration * 1.5
                 raise Faraday::TimeoutError.new('timeout error message')
               end
@@ -397,7 +394,7 @@ describe Ably::PubSub::Http::Client do
 
         context 'and connection fails' do
           let!(:default_host_request_stub) do
-            stub_request(:post, "https://#{Ably::PubSub::Http::Client::DOMAIN}#{path}").to_return do
+            stub_request(:post, "https://main.realtime.ably.net#{path}").to_return do
               raise Faraday::ConnectionFailed.new('connection failure error message')
             end
           end
@@ -413,7 +410,8 @@ describe Ably::PubSub::Http::Client do
         context 'and first request to primary endpoint fails' do
           let(:client_options) do
             default_options.merge(
-              environment: nil,
+              endpoint: Ably::ENDPOINT,
+              fallback_hosts: custom_hosts,
               key: api_key,
               http_max_retry_duration: max_retry_duration,
               http_max_retry_count: max_retry_count,
@@ -422,7 +420,7 @@ describe Ably::PubSub::Http::Client do
           end
           let(:requests) { [] }
           let!(:default_host_request_stub) do
-            stub_request(:post, "https://#{Ably::PubSub::Http::Client::DOMAIN}#{path}").to_return do
+            stub_request(:post, "https://main.realtime.ably.net#{path}").to_return do
               requests << true
               if requests.count == 1
                 raise Faraday::ConnectionFailed.new('connection failure error message')
@@ -450,7 +448,7 @@ describe Ably::PubSub::Http::Client do
         context 'and basic authentication fails' do
           let(:status) { 401 }
           let!(:default_host_request_stub) do
-            stub_request(:post, "https://#{Ably::PubSub::Http::Client::DOMAIN}#{path}").to_return(
+            stub_request(:post, "https://main.realtime.ably.net#{path}").to_return(
               headers: { 'Content-Type' => 'application/json' },
               status: status,
               body: {
@@ -482,7 +480,7 @@ describe Ably::PubSub::Http::Client do
             end
           end
           let!(:default_host_request_stub) do
-            stub_request(:post, "https://#{Ably::PubSub::Http::Client::DOMAIN}#{path}").to_return(&fallback_block)
+            stub_request(:post, "https://main.realtime.ably.net#{path}").to_return(&fallback_block)
           end
 
           it 'attempts the fallback hosts as this is an authentication failure (#RSC15d)' do
@@ -494,14 +492,14 @@ describe Ably::PubSub::Http::Client do
         end
       end
 
-      context 'when environment is production and server returns a 50x error' do
+      context 'when endpoint is the default production routing policy and server returns a 50x error' do
         let(:custom_hosts)       { %w(A.foo.com B.foo.com) }
         let(:max_retry_count)    { 2 }
         let(:max_retry_duration) { 0.5 }
         let(:fallback_block)     { proc { raise Faraday::SSLError.new('ssl error message') } }
         let(:production_options) do
           default_options.merge(
-            environment: nil,
+            endpoint: Ably::ENDPOINT,
             key: api_key,
             http_max_retry_duration: max_retry_duration,
             http_max_retry_count: max_retry_count
@@ -518,7 +516,7 @@ describe Ably::PubSub::Http::Client do
           end
         end
         let!(:default_host_request_stub) do
-          stub_request(:post, "https://#{Ably::PubSub::Http::Client::DOMAIN}#{path}").to_return(&fallback_block)
+          stub_request(:post, "https://main.realtime.ably.net#{path}").to_return(&fallback_block)
         end
 
         context 'with custom fallback hosts provided' do
@@ -599,7 +597,7 @@ describe Ably::PubSub::Http::Client do
             context 'POST with request timeout less than max_retry_duration' do
               let(:client_options) do
                 default_options.merge(
-                  rest_host: primary_host,
+                  endpoint: primary_host,
                   fallback_hosts: fallbacks,
                   token: 'fake.token',
                   port: port,
@@ -622,7 +620,7 @@ describe Ably::PubSub::Http::Client do
             context 'GET with request timeout less than max_retry_duration' do
               let(:client_options) do
                 default_options.merge(
-                  rest_host: primary_host,
+                  endpoint: primary_host,
                   fallback_hosts: fallbacks,
                   token: 'fake.token',
                   port: port,
@@ -645,7 +643,7 @@ describe Ably::PubSub::Http::Client do
             context 'POST with request timeout more than max_retry_duration' do
               let(:client_options) do
                 default_options.merge(
-                  rest_host: primary_host,
+                  endpoint: primary_host,
                   fallback_hosts: fallbacks,
                   token: 'fake.token',
                   port: port,
@@ -667,7 +665,7 @@ describe Ably::PubSub::Http::Client do
             context 'GET with request timeout more than max_retry_duration' do
               let(:client_options) do
                 default_options.merge(
-                  rest_host: primary_host,
+                  endpoint: primary_host,
                   fallback_hosts: fallbacks,
                   token: 'fake.token',
                   port: port,
@@ -714,7 +712,7 @@ describe Ably::PubSub::Http::Client do
 
             let(:client_options) do
               default_options.merge(
-                rest_host: primary_host,
+                endpoint: primary_host,
                 fallback_hosts: fallbacks,
                 token: 'fake.token',
                 port: port,
@@ -769,7 +767,7 @@ describe Ably::PubSub::Http::Client do
 
             let(:client_options) do
               default_options.merge(
-                rest_host: primary_host,
+                endpoint: primary_host,
                 fallback_hosts: fallbacks,
                 token: 'fake.token',
                 port: port,
@@ -836,16 +834,16 @@ describe Ably::PubSub::Http::Client do
         end
       end
 
-      context 'when environment is not production and server returns a 50x error' do
-        let(:env)                { 'custom-env' }
-        let(:default_fallbacks)  { %w(a b c d e).map { |id| "#{env}-#{id}-fallback.ably-realtime.com" } }
+      context 'when endpoint is a custom routing policy and server returns a 50x error' do
+        let(:routing_policy)     { 'custom-env' }
+        let(:default_fallbacks)  { %w(a b c d e).map { |id| "#{routing_policy}.#{id}.fallback.ably-realtime.com" } }
         let(:custom_hosts)       { %w(A.foo.com B.foo.com) }
         let(:max_retry_count)    { 2 }
         let(:max_retry_duration) { 0.5 }
         let(:fallback_block)     { proc { raise Faraday::SSLError.new('ssl error message') } }
         let(:production_options) do
           default_options.merge(
-            environment: env,
+            endpoint: routing_policy,
             key: api_key,
             http_max_retry_duration: max_retry_duration,
             http_max_retry_count: max_retry_count,
@@ -863,15 +861,15 @@ describe Ably::PubSub::Http::Client do
           end
         end
         let!(:default_host_request_stub) do
-          stub_request(:post, "https://#{env}-#{Ably::PubSub::Http::Client::DOMAIN}#{path}").to_return(&fallback_block)
+          stub_request(:post, "https://#{routing_policy}.realtime.ably.net#{path}").to_return(&fallback_block)
         end
 
-        context 'with no fallback hosts provided (#TBC, see https://github.com/ably/wiki/issues/361)' do
+        context 'with no fallback hosts provided (#REC2c4)' do
           let(:client_options) {
             production_options.merge(log_level: :fatal)
           }
 
-          it 'uses the default fallback hosts for that environment as this is not an authentication failure' do
+          it 'uses the default fallback hosts for that routing policy as this is not an authentication failure' do
             fallbacks_called_count = 0
             default_fallbacks.each do |host|
               counting_fallback_proc = proc do
@@ -917,39 +915,12 @@ describe Ably::PubSub::Http::Client do
             expect(default_host_request_stub).to have_been_requested
           end
         end
-
-        context 'with fallback_hosts_use_default: true (#RSC15b, #TO3k7)' do
-          let(:custom_hosts) { Ably::FALLBACK_HOSTS[0...2] }
-
-          before do
-            stub_const 'Ably::FALLBACK_HOSTS', custom_hosts
-          end
-
-          let!(:first_fallback_request_stub) do
-            stub_request(:post, "https://#{Ably::FALLBACK_HOSTS[0]}#{path}").to_return(&fallback_block)
-          end
-
-          let!(:second_fallback_request_stub) do
-            stub_request(:post, "https://#{Ably::FALLBACK_HOSTS[1]}#{path}").to_return(&fallback_block)
-          end
-
-          let(:client_options) {
-            production_options.merge(fallback_hosts: custom_hosts, log_level: :fatal)
-          }
-
-          it 'attempts the default fallback hosts as this is an authentication failure' do
-            expect { publish_block.call }.to raise_error(Ably::Exceptions::ServerError)
-            expect(default_host_request_stub).to have_been_requested
-            expect(first_fallback_request_stub).to have_been_requested
-            expect(second_fallback_request_stub).to have_been_requested
-          end
-        end
       end
     end
 
-    context 'with a custom host' do
+    context 'with a hostname endpoint' do
       let(:custom_host)   { 'host.does.not.exist' }
-      let(:client_options) { default_options.merge(key: api_key, rest_host: custom_host) }
+      let(:client_options) { default_options.merge(key: api_key, endpoint: custom_host) }
       let(:capability)     { { :foo => ["publish"] } }
 
       context 'that does not exist' do
@@ -969,12 +940,12 @@ describe Ably::PubSub::Http::Client do
           before do
             Ably::FALLBACK_HOSTS.each do |host|
               stub_request(:post, "https://#{host}#{path}").to_return do
-                raise 'Fallbacks should not be used with custom hosts'
+                raise 'Fallbacks should not be used with a hostname endpoint'
               end
             end
           end
 
-          specify 'are never used' do
+          specify 'are never used (#REC2c2, #RSC15m)' do
             expect { client.channel('test').publish('event', 'data') }.to raise_error Ably::Exceptions::ConnectionError
             expect(custom_host_request_stub).to have_been_requested
           end
@@ -997,12 +968,12 @@ describe Ably::PubSub::Http::Client do
           before do
             Ably::FALLBACK_HOSTS.each do |host|
               stub_request(:post, "https://#{host}#{path}").to_return do
-                raise 'Fallbacks should not be used with custom hosts'
+                raise 'Fallbacks should not be used with a hostname endpoint'
               end
             end
           end
 
-          specify 'are never used' do
+          specify 'are never used (#REC2c2, #RSC15m)' do
             expect { client.auth.request_token }.to raise_error Ably::Exceptions::ConnectionTimeout
             expect(custom_host_request_stub).to have_been_requested
           end
@@ -1086,7 +1057,7 @@ describe Ably::PubSub::Http::Client do
           let(:client_options) { default_options.merge(key: api_key, agent: agent) }
 
           let!(:publish_message_stub) do
-            stub_request(:post, "#{client.endpoint}/channels/foo/publish").
+            stub_request(:post, "#{client.uri}/channels/foo/publish").
               with(headers: {
                 'X-Ably-Version' => Ably::PROTOCOL_VERSION,
                 'Ably-Agent' => agent || Ably::AGENT
@@ -1113,7 +1084,7 @@ describe Ably::PubSub::Http::Client do
     context '#request (#RSC19*, #TO3l9)' do
       let(:client_options) { default_options.merge(key: api_key) }
       let(:device_id) { random_str }
-      let(:endpoint) { client.endpoint }
+      let(:base_uri) { client.uri }
 
       context 'get' do
         it 'returns an HttpPaginatedResponse object' do
@@ -1156,7 +1127,7 @@ describe Ably::PubSub::Http::Client do
 
       context 'post', :webmock do
         before do
-          stub_request(:delete, "#{endpoint}/push/deviceRegistrations/#{device_id}/resetUpdateToken").
+          stub_request(:delete, "#{base_uri}/push/deviceRegistrations/#{device_id}/resetUpdateToken").
             to_return(status: 200, body: '{}', headers: { 'Content-Type' => 'application/json' })
         end
 
@@ -1168,14 +1139,14 @@ describe Ably::PubSub::Http::Client do
 
         it 'raises an exception once body size in bytes exceeded' do
           expect {
-            client.request(:post, endpoint, {}, { content: 'x' * Ably::PubSub::Http::Client::MAX_FRAME_SIZE })
+            client.request(:post, base_uri, {}, { content: 'x' * Ably::PubSub::Http::Client::MAX_FRAME_SIZE })
           }.to raise_error(Ably::Exceptions::MaxFrameSizeExceeded)
         end
       end
 
       context 'delete', :webmock do
         before do
-          stub_request(:delete, "#{endpoint}/push/channelSubscriptions?deviceId=#{device_id}").
+          stub_request(:delete, "#{base_uri}/push/channelSubscriptions?deviceId=#{device_id}").
             to_return(status: 200, body: '{}', headers: { 'Content-Type' => 'application/json' })
         end
 
@@ -1190,7 +1161,7 @@ describe Ably::PubSub::Http::Client do
         let(:body_params) { { 'metadata' => { 'key' => 'value' } } }
 
         before do
-          stub_request(:patch, "#{endpoint}/push/deviceRegistrations/#{device_id}")
+          stub_request(:patch, "#{base_uri}/push/deviceRegistrations/#{device_id}")
             .with(body: serialize_body(body_params, protocol))
             .to_return(status: 200, body: '{}', headers: { 'Content-Type' => 'application/json' })
         end
@@ -1219,7 +1190,7 @@ describe Ably::PubSub::Http::Client do
         end
 
         before do
-          stub_request(:put, "#{endpoint}/push/deviceRegistrations/#{device_id}")
+          stub_request(:put, "#{base_uri}/push/deviceRegistrations/#{device_id}")
             .with(body: serialize_body(body_params, protocol))
             .to_return(status: 200, body: '{}', headers: { 'Content-Type' => 'application/json' })
         end
@@ -1246,7 +1217,7 @@ describe Ably::PubSub::Http::Client do
 
           before do
             @request_id = nil
-            stub_request(:get, Addressable::Template.new("#{client.endpoint}/time{?request_id}")).with do |request|
+            stub_request(:get, Addressable::Template.new("#{client.uri}/time{?request_id}")).with do |request|
               @request_id = request.uri.query_values['request_id']
             end.to_return do
               raise Faraday::TimeoutError.new('timeout error message')
@@ -1268,7 +1239,7 @@ describe Ably::PubSub::Http::Client do
 
           context 'with mocks to inspect the params', :webmock do
             before do
-              stub_request(:post, Addressable::Template.new("#{client.endpoint}/channels/#{channel_name}/publish{?request_id}")).
+              stub_request(:post, Addressable::Template.new("#{client.uri}/channels/#{channel_name}/publish{?request_id}")).
                 with do |request|
                   @request_id = request.uri.query_values['request_id']
                 end.to_return(:status => 200, :body => [], :headers => { 'Content-Type' => 'application/json' })
@@ -1306,13 +1277,13 @@ describe Ably::PubSub::Http::Client do
           end
         end
 
-        context 'option add_request_ids: true and specified fallback hosts', :webmock do
-          let(:client_options) { { key: api_key, fallback_hosts_use_default: true, add_request_ids: true, log_level: :error, log_retries_as_info: true } }
+        context 'option add_request_ids: true and default fallback hosts', :webmock do
+          let(:client_options) { { key: api_key, add_request_ids: true, log_level: :error, log_retries_as_info: true } }
           let(:requests)       { [] }
 
           before do
             @request_id = nil
-            hosts = Ably::FALLBACK_HOSTS + ['rest.ably.io']
+            hosts = Ably::FALLBACK_HOSTS + ['main.realtime.ably.net']
             hosts.each do |host|
               stub_request(:get, Addressable::Template.new("https://#{host.downcase}/time{?request_id}")).with do |request|
                 @request_id = request.uri.query_values['request_id']
@@ -1373,8 +1344,8 @@ describe Ably::PubSub::Http::Client do
       context 'with the first request failing' do
         let(:client_options) do
           default_options.merge(
-            rest_host: 'non.existent.domain.local',
-            fallback_hosts: [[environment, Ably::PubSub::Http::Client::DOMAIN].join('-')],
+            endpoint: 'non.existent.domain.local',
+            fallback_hosts: [TestApp.instance.host],
             key: api_key,
             logger: custom_logger,
             log_retries_as_info: false)
@@ -1390,7 +1361,7 @@ describe Ably::PubSub::Http::Client do
       context 'with all requests failing' do
         let(:client_options) do
           default_options.merge(
-            rest_host: 'non.existent.domain.local',
+            endpoint: 'non.existent.domain.local',
             fallback_hosts: ['non2.existent.domain.local'],
             key: api_key,
             logger: custom_logger,
