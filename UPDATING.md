@@ -149,9 +149,68 @@ end
 
 `Ably::PubSub::Http::Channels#release` is unchanged.
 
+### Protocol version 5
+
+2.0 uses Ably protocol version 5 (previously 2). This changes the result of `publish` and the shape of `stats`, as
+described below, and enables `update_message`, `delete_message` and `append_message` on HTTP and realtime channels.
+
+### Publish results
+
+`publish` now returns an `Ably::Models::PublishResult`. Its `serials` array holds one serial per published message,
+in publish order; an entry is `nil` if the message was discarded by a conflation rule.
+
+```ruby
+# 1.x
+published = http_channel.publish('event', 'payload') # => true
+
+# 2.0
+result = http_channel.publish('event', 'payload')    # => Ably::Models::PublishResult
+result.serials                                       # => ["<serial>"]
+```
+
+On a realtime channel, the deferrable returned by `publish` now succeeds with a `PublishResult` instead of the
+published `Message` (or `Array<Message>`):
+
+```ruby
+# 1.x
+realtime_channel.publish('event', 'payload') do |message|
+  message.name # => "event"
+end
+
+# 2.0
+realtime_channel.publish('event', 'payload') do |result|
+  result.serials # => ["<serial>"]
+end
+```
+
+An HTTP publish that fails still raises an exception, so code that checked the `Boolean` result for success can drop
+the check.
+
+### Stats
+
+`Ably::Models::Stats` follows the Ably spec v2.1+ (TS12) format. The nested accessors (`all`, `inbound`, `outbound`,
+`persisted`, `connections`, `channels`, `api_requests`, `token_requests`) are replaced by `entries`, a flat `Hash` keyed
+by dot-separated stat names:
+
+```ruby
+stat = client.stats.items.first
+
+# 1.x
+stat.all.all.count
+stat.interval_granularity
+
+# 2.0
+stat.entries['messages.all.all.count']
+stat.unit
+```
+
+`Stats` also gains `in_progress`, `schema` and `app_id`. The `Stats::MessageTraffic`, `Stats::MessageTypes`,
+`Stats::MessageCount`, `Stats::ConnectionTypes`, `Stats::RequestCount` and `Stats::ResourceCount` classes have been
+removed.
+
 ### Unchanged
 
-Everything after construction:
+Everything after construction, apart from the `publish` result and `Stats` changes above:
 
 ```ruby
 client = Ably::PubSub::Server.create_http_client(key: ENV['ABLY_API_KEY'])
