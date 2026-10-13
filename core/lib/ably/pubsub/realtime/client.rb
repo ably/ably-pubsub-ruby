@@ -15,8 +15,6 @@ module Ably
         extend Forwardable
         using Ably::Util::AblyExtensions
 
-        DOMAIN = 'realtime.ably.io'
-
         # A {Aby::Realtime::Channels} object.
         #
         # @spec RTC3, RTS1
@@ -55,10 +53,6 @@ module Ably
         # @return [Boolean]
         attr_reader :queue_messages
 
-        # The custom realtime websocket host that is being used if it was provided with the option `:ws_host` when the {Client} was created
-        # @return [String,Nil]
-        attr_reader :custom_realtime_host
-
         # When true, as soon as the client library is instantiated it will connect to Ably.  If this attribute is false, a connection must be opened explicitly
         # @return [Boolean]
         attr_reader :auto_connect
@@ -74,7 +68,7 @@ module Ably
         def_delegators :auth, :client_id, :auth_options
         def_delegators :@rest_client, :encoders
         def_delegators :@rest_client, :use_tls?, :protocol, :protocol_binary?
-        def_delegators :@rest_client, :environment, :custom_host, :custom_port, :custom_tls_port
+        def_delegators :@rest_client, :endpoint, :primary_domain, :custom_port, :custom_tls_port
         def_delegators :@rest_client, :log_level
         def_delegators :@rest_client, :options
 
@@ -139,7 +133,6 @@ module Ably
           @rest_client           = Ably::Internal.create_http_client(options.merge(realtime_client: self))
           @echo_messages         = rest_client.options.fetch_with_default(:echo_messages, true)
           @queue_messages        = rest_client.options.fetch_with_default(:queue_messages, true)
-          @custom_realtime_host  = rest_client.options[:realtime_host] || rest_client.options[:ws_host]
           @auto_connect          = rest_client.options.fetch_with_default(:auto_connect, true)
           @recover               = rest_client.options.fetch_with_default(:recover, '')
 
@@ -304,10 +297,10 @@ module Ably
           end
         end
 
-        # @!attribute [r] endpoint
-        # @return [URI::Generic] Default Ably Realtime endpoint used for all requests
-        def endpoint
-          endpoint_for_host(custom_realtime_host || [environment, DOMAIN].compact.join('-'))
+        # @!attribute [r] uri
+        # @return [URI::Generic] Ably WebSocket URI for the {#primary_domain}, shared with REST requests (RTN2)
+        def uri
+          uri_for_host(primary_domain)
         end
 
         # (see Ably::PubSub::Http::Client#register_encoder)
@@ -337,8 +330,8 @@ module Ably
         # @api private
         def fallback_endpoint
           unless defined?(@fallback_endpoints) && @fallback_endpoints
-            @fallback_endpoints = fallback_hosts.shuffle.map { |fallback_host| endpoint_for_host(fallback_host) }
-            @fallback_endpoints << endpoint # Try the original host last if all fallbacks have been used
+            @fallback_endpoints = fallback_hosts.shuffle.map { |fallback_host| uri_for_host(fallback_host) }
+            @fallback_endpoints << uri # Try the original host last if all fallbacks have been used
           end
 
           fallback_endpoint_index = connection.manager.retry_count_for_state(:disconnected) + connection.manager.retry_count_for_state(:suspended) - 1
@@ -356,7 +349,7 @@ module Ably
         end
 
         private
-        def endpoint_for_host(host)
+        def uri_for_host(host)
           port = if use_tls?
             custom_tls_port
           else

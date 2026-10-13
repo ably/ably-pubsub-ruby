@@ -7,7 +7,7 @@ describe Ably::PubSub::Realtime::Connection, :event_machine do
 
   vary_by_protocol do
     let(:default_options) do
-      { key: api_key, environment: environment, protocol: protocol }
+      { key: api_key, endpoint: endpoint, protocol: protocol }
     end
 
     let(:client_options) { default_options }
@@ -29,7 +29,7 @@ describe Ably::PubSub::Realtime::Connection, :event_machine do
 
       context 'current_host' do
         it 'is available immediately after the client is instanced' do
-          expect(connection.current_host.to_s).to match(/\.ably\.io$/)
+          expect(connection.current_host).to eql(TestApp.instance.host)
           stop_reactor
         end
       end
@@ -484,7 +484,7 @@ describe Ably::PubSub::Realtime::Connection, :event_machine do
       end
 
       context "when can't connect to host" do
-        let(:client_options) { super().merge(realtime_host: 'non-existent.ably.io') }
+        let(:client_options) { super().merge(endpoint: 'non-existent.ably.io') }
 
         it 'logs error on failed connection attempt' do
           logger_expectation = lambda do |*args, &block|
@@ -1351,7 +1351,7 @@ describe Ably::PubSub::Realtime::Connection, :event_machine do
 
         it "is available when connection is in one of the states: #{available_states.join(', ')}" do
           connection.once(:connected) do
-            allow(client).to receive(:endpoint).and_return(
+            allow(client).to receive(:uri).and_return(
               URI::Generic.build(
                 scheme: 'wss',
                 host:   'this.host.does.not.exist.com'

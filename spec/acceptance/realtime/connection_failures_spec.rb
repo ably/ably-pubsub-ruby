@@ -6,7 +6,7 @@ describe Ably::PubSub::Realtime::Connection, 'failures', :event_machine do
 
   vary_by_protocol do
     let(:default_options) do
-      { key: api_key, environment: environment, protocol: protocol }
+      { key: api_key, endpoint: endpoint, protocol: protocol }
     end
 
     let(:client_options) { default_options }
@@ -297,7 +297,7 @@ describe Ably::PubSub::Realtime::Connection, 'failures', :event_machine do
         let(:timer)                   { Hash.new }
 
         let(:client_options) do
-          client_failure_options.merge(realtime_host: 'non.existent.host')
+          client_failure_options.merge(endpoint: 'non.existent.host')
         end
 
         def count_state_changes
@@ -335,7 +335,7 @@ describe Ably::PubSub::Realtime::Connection, 'failures', :event_machine do
 
           context 'for the first time' do
             let(:client_options) do
-              default_options.merge(realtime_host: 'non.existent.host', disconnected_retry_timeout: 2, log_level: :error)
+              default_options.merge(endpoint: 'non.existent.host', disconnected_retry_timeout: 2, log_level: :error)
             end
 
             it 'reattempts connection immediately and then waits disconnected_retry_timeout for a subsequent attempt' do
@@ -476,7 +476,7 @@ describe Ably::PubSub::Realtime::Connection, 'failures', :event_machine do
           it 'is reset to nil when :connected' do
             connection.once(:disconnected) do |error|
               # stub the host so that the connection connects
-              allow(connection).to receive(:determine_host).and_yield(TestApp.instance.realtime_host)
+              allow(connection).to receive(:determine_host).and_yield(TestApp.instance.host)
               connection.once(:connected) do
                 expect(connection.error_reason).to be_nil
                 stop_reactor
@@ -535,7 +535,7 @@ describe Ably::PubSub::Realtime::Connection, 'failures', :event_machine do
                 disconnected_retry_timeout: 0.1,
                 suspended_retry_timeout:    0.1,
                 max_connection_state_ttl:   0.2,
-                realtime_host:              'non.existent.host'
+                endpoint:                   'non.existent.host'
               )
             end
 
@@ -930,8 +930,7 @@ describe Ably::PubSub::Realtime::Connection, 'failures', :event_machine do
                   original_method.call(*args, &block)
                 end
                 connection.once(:connected) do
-                  host = "#{"#{environment}-" if environment && environment.to_s != 'production'}#{Ably::PubSub::Realtime::Client::DOMAIN}"
-                  expect(hosts.first).to eql(host)
+                  expect(hosts.first).to eql(TestApp.instance.host)
                   expect(hosts.length).to eql(1)
                   stop_reactor
                 end
@@ -1418,7 +1417,7 @@ describe Ably::PubSub::Realtime::Connection, 'failures', :event_machine do
 
       let(:timeout_options) do
         default_options.merge(
-          environment:                :production,
+          endpoint:                   Ably::ENDPOINT,
           log_level:                  :none,
           disconnected_retry_timeout: retry_every_for_tests,
           suspended_retry_timeout:    retry_every_for_tests,
@@ -1432,11 +1431,11 @@ describe Ably::PubSub::Realtime::Connection, 'failures', :event_machine do
       let(:retry_count_for_one_state)  { 1 + expected_retry_attempts } # initial connect then disconnected
       let(:retry_count_for_all_states) { 1 + expected_retry_attempts + 1 } # initial connection, disconnected & then one suspended attempt
 
-      context 'with custom realtime websocket host option' do
+      context 'with a hostname endpoint' do
         let(:expected_host) { 'this.host.does.not.exist' }
-        let(:client_options) { timeout_options.merge(realtime_host: expected_host) }
+        let(:client_options) { timeout_options.merge(endpoint: expected_host) }
 
-        it 'never uses a fallback host' do
+        it 'never uses a fallback host (#REC2c2)' do
           expect(connection).to receive(:create_transport).exactly(retry_count_for_all_states).times do |host|
             expect(host).to eql(expected_host)
             raise EventMachine::ConnectionError
@@ -1454,31 +1453,33 @@ describe Ably::PubSub::Realtime::Connection, 'failures', :event_machine do
         let(:custom_port) { 666}
         let(:client_options) { timeout_options.merge(tls_port: custom_port) }
 
-        it 'never uses a fallback host' do
-          expect(connection).to receive(:create_transport).exactly(retry_count_for_all_states).times do |host, port|
-            expect(port).to eql(custom_port)
+        it 'uses the custom port for every connection attempt, including to fallback hosts' do
+          ports_used = []
+          allow(connection).to receive(:create_transport) do |host, port|
+            ports_used << port
             raise EventMachine::ConnectionError
           end
 
           connection.once(:suspended) do
             connection.once(:suspended) do
+              expect(ports_used.length).to be >= retry_count_for_all_states
+              expect(ports_used.uniq).to eql([custom_port])
               stop_reactor
             end
           end
         end
       end
 
-      context 'with non-production environment' do
-        let(:environment)    { 'sandbox' }
-        let(:expected_host)  { "#{environment}-#{Ably::PubSub::Realtime::Client::DOMAIN}" }
-        let(:client_options) { timeout_options.merge(environment: environment) }
+      context 'with the test app routing policy endpoint' do
+        let(:expected_host)  { TestApp.instance.host }
+        let(:client_options) { timeout_options.merge(endpoint: endpoint) }
 
-        context ':fallback_hosts_use_default is unset' do
+        context 'and no fallback hosts provided' do
           let(:max_time_in_state_for_tests) { 8 }
-          let(:expected_hosts) { Ably::CUSTOM_ENVIRONMENT_FALLBACKS_SUFFIXES.map { |suffix| "#{environment}#{suffix}" } + [expected_host] }
+          let(:expected_hosts) { Ably::Internal.fallback_domains(endpoint) + [expected_host] }
           let(:fallback_hosts_used) { Array.new }
 
-          it 'uses fallback hosts by default' do
+          it 'uses the default fallback hosts for that routing policy (#REC2c3, #REC2c4)' do
             allow(connection).to receive(:create_transport) do |host|
               fallback_hosts_used << host
               raise EventMachine::ConnectionError
@@ -1491,28 +1492,8 @@ describe Ably::PubSub::Realtime::Connection, 'failures', :event_machine do
           end
         end
 
-        context ':fallback_hosts_use_default is true' do
+        context 'when the connection succeeds' do
           let(:max_time_in_state_for_tests) { 4 }
-          let(:fallback_hosts_used) { Array.new }
-          let(:client_options) { timeout_options.merge(environment: environment, fallback_hosts_use_default: true) }
-
-          it 'uses a fallback host on every subsequent disconnected attempt until suspended (#RTN17b, #TO3k7)' do
-            request = 0
-            allow(connection).to receive(:create_transport) do |host|
-              if request == 0
-                expect(host).to eql(expected_host)
-              else
-                fallback_hosts_used << host
-              end
-              request += 1
-              raise EventMachine::ConnectionError
-            end
-
-            connection.once(:suspended) do
-              expect(fallback_hosts_used.uniq).to match_array(Ably::FALLBACK_HOSTS + [expected_host])
-              stop_reactor
-            end
-          end
 
           it 'does not use a fallback host if the connection connects on the default host and then later becomes disconnected', em_timeout: 25 do
             request = 0
@@ -1540,7 +1521,7 @@ describe Ably::PubSub::Realtime::Connection, 'failures', :event_machine do
           let(:max_time_in_state_for_tests) { 4 }
           let(:fallback_hosts) { %w(a.foo.com b.foo.com) }
           let(:fallback_hosts_used) { Array.new }
-          let(:client_options) { timeout_options.merge(environment: environment, fallback_hosts: fallback_hosts) }
+          let(:client_options) { timeout_options.merge(endpoint: endpoint, fallback_hosts: fallback_hosts) }
 
           it 'uses a fallback host on every subsequent disconnected attempt until suspended (#RTN17b, #TO3k6)' do
             request = 0
@@ -1562,14 +1543,10 @@ describe Ably::PubSub::Realtime::Connection, 'failures', :event_machine do
         end
       end
 
-      context 'with production environment' do
-        let(:custom_hosts)   { %w(a.ably-realtime.com b.ably-realtime.com) }
-        before do
-          stub_const 'Ably::FALLBACK_HOSTS', custom_hosts
-        end
-
-        let(:expected_host)  { Ably::PubSub::Realtime::Client::DOMAIN }
-        let(:client_options) { timeout_options.merge(environment: nil) }
+      context 'with the default production routing policy endpoint' do
+        let(:custom_hosts)   { Ably::FALLBACK_HOSTS[0...2] }
+        let(:expected_host)  { 'main.realtime.ably.net' }
+        let(:client_options) { timeout_options.merge(fallback_hosts: custom_hosts) }
 
         let(:fallback_hosts_used) { Array.new }
 
@@ -1598,7 +1575,7 @@ describe Ably::PubSub::Realtime::Connection, 'failures', :event_machine do
             @suspended = 0
           end
 
-          context 'and default options' do
+          context 'and two fallback hosts' do
             let(:max_time_in_state_for_tests) { 2 } # allow time for 3 attempts, 2 configured fallbacks + primary host
 
             it 'uses a fallback host + the original host once on every subsequent disconnected attempt until suspended' do
@@ -1671,7 +1648,7 @@ describe Ably::PubSub::Realtime::Connection, 'failures', :event_machine do
             let(:max_time_in_state_for_tests) { 3 }
             let(:fallback_hosts) { [] }
             let(:hosts_used) { Array.new }
-            let(:client_options) { timeout_options.merge(environment: 'production', fallback_hosts: fallback_hosts) }
+            let(:client_options) { timeout_options.merge(fallback_hosts: fallback_hosts) }
 
             it 'uses a fallback host on every subsequent disconnected attempt until suspended (#RTN17b, #TO3k6)' do
               allow(connection).to receive(:create_transport) do |host|
@@ -1691,7 +1668,7 @@ describe Ably::PubSub::Realtime::Connection, 'failures', :event_machine do
             let(:max_time_in_state_for_tests) { 3 }
             let(:fallback_hosts) { %w(a.foo.com b.foo.com) }
             let(:fallback_hosts_used) { Array.new }
-            let(:client_options) { timeout_options.merge(environment: 'production', fallback_hosts: fallback_hosts) }
+            let(:client_options) { timeout_options.merge(fallback_hosts: fallback_hosts) }
 
             it 'uses a fallback host on every subsequent disconnected attempt until suspended (#RTN17b, #TO3k6)' do
               request = 0

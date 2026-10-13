@@ -1,14 +1,6 @@
 # encoding: utf-8
 
 shared_examples 'a client initializer' do
-  def subdomain
-    if rest?
-      'rest'
-    else
-      'realtime'
-    end
-  end
-
   def protocol
     if rest?
       'http'
@@ -154,38 +146,45 @@ shared_examples 'a client initializer' do
       end
     end
 
-    context 'endpoint' do
+    context 'endpoint (#REC1)' do
       before do
         allow_any_instance_of(subject.class).to receive(:auto_connect).and_return(false)
       end
 
-      it 'defaults to production' do
-        expect(subject.endpoint.to_s).to eql("#{protocol}s://#{subdomain}.ably.io")
+      it 'defaults to main' do
+        expect(subject.endpoint).to eql('main')
       end
 
-      context 'with environment option' do
-        let(:client_options) { default_options.merge(environment: 'sandbox', auto_connect: false) }
+      it 'uses the main production primary domain (#REC1a)' do
+        expect(subject.primary_domain).to eql('main.realtime.ably.net')
+        expect(subject.uri.to_s).to eql("#{protocol}s://main.realtime.ably.net")
+      end
 
-        it 'uses an alternate endpoint' do
-          expect(subject.endpoint.to_s).to eql("#{protocol}s://sandbox-#{subdomain}.ably.io")
+      context 'with a routing policy name' do
+        let(:client_options) { default_options.merge(endpoint: 'acme') }
+
+        it 'uses the production primary domain for that routing policy (#REC1b4)' do
+          expect(subject.primary_domain).to eql('acme.realtime.ably.net')
+          expect(subject.uri.to_s).to eql("#{protocol}s://acme.realtime.ably.net")
         end
       end
 
-      context 'with rest_host option' do
-        let(:client_options) { default_options.merge(rest_host: 'custom-rest.host.com', auto_connect: false) }
+      context 'with a nonprod routing policy name' do
+        let(:client_options) { default_options.merge(endpoint: 'nonprod:sandbox') }
 
-        it 'uses an alternate endpoint for REST clients' do
-          skip 'does not apply as testing a Realtime client' unless rest?
-          expect(subject.endpoint.to_s).to eql("#{protocol}s://custom-rest.host.com")
+        it 'uses the non-production primary domain for that routing policy (#REC1b3)' do
+          expect(subject.primary_domain).to eql('sandbox.realtime.ably-nonprod.net')
+          expect(subject.uri.to_s).to eql("#{protocol}s://sandbox.realtime.ably-nonprod.net")
         end
       end
 
-      context 'with realtime_host option' do
-        let(:client_options) { default_options.merge(realtime_host: 'custom-realtime.host.com', auto_connect: false) }
+      %w(foo.example.com localhost 127.0.0.1 ::1).each do |hostname|
+        context "with hostname #{hostname}" do
+          let(:client_options) { default_options.merge(endpoint: hostname) }
 
-        it 'uses an alternate endpoint for Realtime clients' do
-          skip 'does not apply as testing a REST client' if rest?
-          expect(subject.endpoint.to_s).to eql("#{protocol}s://custom-realtime.host.com")
+          it 'uses the hostname as the primary domain (#REC1b2)' do
+            expect(subject.primary_domain).to eql(hostname)
+          end
         end
       end
 
@@ -193,7 +192,7 @@ shared_examples 'a client initializer' do
         let(:client_options) { default_options.merge(port: 999, tls: false, auto_connect: false) }
 
         it 'uses the custom port for non-TLS requests' do
-          expect(subject.endpoint.to_s).to include(":999")
+          expect(subject.uri.to_s).to include(":999")
         end
       end
 
@@ -201,7 +200,7 @@ shared_examples 'a client initializer' do
         let(:client_options) { default_options.merge(tls_port: 666, tls: true, auto_connect: false) }
 
         it 'uses the custom port for TLS requests' do
-          expect(subject.endpoint.to_s).to include(":666")
+          expect(subject.uri.to_s).to include(":666")
         end
       end
     end
@@ -219,7 +218,7 @@ shared_examples 'a client initializer' do
         end
 
         it 'uses HTTP' do
-          expect(subject.endpoint.to_s).to eql("#{protocol}://#{subdomain}.ably.io")
+          expect(subject.uri.to_s).to eql("#{protocol}://main.realtime.ably.net")
         end
       end
 
@@ -266,133 +265,77 @@ shared_examples 'a client initializer' do
       end
     end
 
-    context 'environment' do
-      context 'when set without custom fallback hosts configured' do
-        let(:environment) { 'foo' }
-        let(:client_options) { default_options.merge(environment: environment) }
-        let(:default_fallbacks) { %w(a b c d e).map { |id| "#{environment}-#{id}-fallback.ably-realtime.com" } }
+    context 'fallback hosts (#REC2)' do
+      before do
+        allow_any_instance_of(subject.class).to receive(:auto_connect).and_return(false)
+      end
 
-        it 'sets the environment attribute' do
-          expect(subject.environment).to eql(environment)
-        end
+      it 'defaults to the main production fallback hosts (#REC2c1)' do
+        expect(subject.fallback_hosts.sort).to eql(%w(a b c d e).map { |id| "main.#{id}.fallback.ably-realtime.com" })
+        expect(subject.fallback_hosts.sort).to eql(Ably::FALLBACK_HOSTS)
+      end
 
-        it 'uses the default fallback hosts (#TBC, see https://github.com/ably/wiki/issues/361)' do
-          expect(subject.fallback_hosts.sort).to eql(default_fallbacks)
+      context 'with a routing policy name' do
+        let(:client_options) { default_options.merge(endpoint: 'acme') }
+
+        it 'uses the production fallback hosts for that routing policy (#REC2c4)' do
+          expect(subject.fallback_hosts.sort).to eql(%w(a b c d e).map { |id| "acme.#{id}.fallback.ably-realtime.com" })
         end
       end
 
-      context 'when set with custom fallback hosts configured' do
-        let(:environment) { 'foo' }
-        let(:custom_fallbacks) { %w(a b c).map { |id| "#{environment}-#{id}.foo.com" } }
-        let(:client_options) { default_options.merge(environment: environment, fallback_hosts: custom_fallbacks) }
+      context 'with a nonprod routing policy name' do
+        let(:client_options) { default_options.merge(endpoint: 'nonprod:sandbox') }
 
-        it 'sets the environment attribute' do
-          expect(subject.environment).to eql(environment)
-        end
-
-        it 'uses the custom provided fallback hosts (#RSC15a)' do
-          expect(subject.fallback_hosts.sort).to eql(custom_fallbacks)
+        it 'uses the non-production fallback hosts for that routing policy (#REC2c3)' do
+          expect(subject.fallback_hosts.sort).to eql(%w(a b c d e).map { |id| "sandbox.#{id}.fallback.ably-realtime-nonprod.com" })
         end
       end
 
-      context 'when set with fallback_hosts_use_default' do
-        let(:environment) { 'foo' }
-        let(:custom_fallbacks) { %w(a b c).map { |id| "#{environment}-#{id}.foo.com" } }
-        let(:default_production_fallbacks) { %w(a b c d e).map { |id| "#{id}.ably-realtime.com" } }
-        let(:client_options) { default_options.merge(environment: environment, fallback_hosts_use_default: true) }
+      %w(foo.example.com localhost 127.0.0.1 ::1).each do |hostname|
+        context "with hostname #{hostname}" do
+          let(:client_options) { default_options.merge(endpoint: hostname) }
 
-        it 'sets the environment attribute' do
-          expect(subject.environment).to eql(environment)
-        end
-
-        it 'uses the production default fallback hosts (#RTN17b)' do
-          expect(subject.fallback_hosts.sort).to eql(default_production_fallbacks)
+          it 'has no default fallback hosts (#REC2c2)' do
+            expect(subject.fallback_hosts).to be_empty
+          end
         end
       end
-    end
 
-    context 'rest_host' do
-      context 'when set without custom fallback hosts configured' do
-        let(:custom_rest_host) { 'foo.com' }
-        let(:client_options) { default_options.merge(rest_host: custom_rest_host) }
+      context 'with custom fallback hosts configured' do
+        let(:custom_fallbacks) { %w(a b c).map { |id| "#{id}.foo.com" } }
 
-        it 'sets the custom_host attribute' do
-          expect(subject.custom_host).to eql(custom_rest_host)
+        %w(main nonprod:sandbox foo.example.com).each do |endpoint_value|
+          context "and endpoint #{endpoint_value}" do
+            let(:client_options) { default_options.merge(endpoint: endpoint_value, fallback_hosts: custom_fallbacks) }
+
+            it 'uses the custom provided fallback hosts (#REC2a2)' do
+              expect(subject.fallback_hosts.sort).to eql(custom_fallbacks)
+            end
+          end
         end
+      end
 
-        it 'has no default fallback hosts' do
+      context 'with an empty fallback hosts list' do
+        let(:client_options) { default_options.merge(fallback_hosts: []) }
+
+        it 'has no fallback hosts' do
           expect(subject.fallback_hosts).to be_empty
         end
       end
 
-      context 'when set with environment and without custom fallback hosts configured' do
-        let(:environment) { 'foobar' }
-        let(:custom_rest_host) { 'foo.com' }
-        let(:client_options) { default_options.merge(environment: environment, rest_host: custom_rest_host) }
+      context 'with a custom port' do
+        let(:client_options) { default_options.merge(port: 555) }
 
-        it 'sets the environment attribute' do
-          expect(subject.environment).to eql(environment)
-        end
-
-        it 'sets the custom_host attribute' do
-          expect(subject.custom_host).to eql(custom_rest_host)
-        end
-
-        it 'has no default fallback hosts' do
-          expect(subject.fallback_hosts).to be_empty
+        it 'uses the default fallback hosts' do
+          expect(subject.fallback_hosts.sort).to eql(Ably::FALLBACK_HOSTS)
         end
       end
 
-      context 'when set with custom fallback hosts configured' do
-        let(:custom_rest_host) { 'foo.com' }
-        let(:custom_fallbacks) { %w(a b c).map { |id| "#{environment}-#{id}.foo.com" } }
-        let(:client_options) { default_options.merge(rest_host: custom_rest_host, fallback_hosts: custom_fallbacks) }
+      context 'with a custom TLS port' do
+        let(:client_options) { default_options.merge(tls_port: 555) }
 
-        it 'sets the custom_host attribute' do
-          expect(subject.custom_host).to eql(custom_rest_host)
-        end
-
-        it 'has no default fallback hosts' do
-          expect(subject.fallback_hosts.sort).to eql(custom_fallbacks)
-        end
-      end
-    end
-
-    context 'realtime_host' do
-      context 'when set without custom fallback hosts configured' do
-        let(:custom_realtime_host) { 'realtime.foo.com' }
-        let(:client_options) { default_options.merge(realtime_host: custom_realtime_host) }
-
-        # These tests are shared between realtime & rest clients
-        # So don't test for the attribute, instead test the options
-        it 'sets the realtime_host option' do
-          expect(subject.options[:realtime_host]).to eql(custom_realtime_host)
-        end
-
-        it 'has no default fallback hosts' do
-          expect(subject.fallback_hosts).to be_empty
-        end
-      end
-    end
-
-    context 'custom port' do
-      context 'when set without custom fallback hosts configured' do
-        let(:custom_port) { 555 }
-        let(:client_options) { default_options.merge(port: custom_port) }
-
-        it 'has no default fallback hosts' do
-          expect(subject.fallback_hosts).to be_empty
-        end
-      end
-    end
-
-    context 'custom TLS port' do
-      context 'when set without custom fallback hosts configured' do
-        let(:custom_port) { 555 }
-        let(:client_options) { default_options.merge(tls_port: custom_port) }
-
-        it 'has no default fallback hosts' do
-          expect(subject.fallback_hosts).to be_empty
+        it 'uses the default fallback hosts' do
+          expect(subject.fallback_hosts.sort).to eql(Ably::FALLBACK_HOSTS)
         end
       end
     end

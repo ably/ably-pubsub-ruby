@@ -3,7 +3,7 @@ require 'spec_helper'
 
 describe Ably::PubSub::Realtime::Channel, :event_machine do
   vary_by_protocol do
-    let(:default_options) { { key: api_key, environment: environment, protocol: protocol } }
+    let(:default_options) { { key: api_key, endpoint: endpoint, protocol: protocol } }
     let(:client_options)  { default_options }
 
     let(:client)       { auto_close Ably::Internal.create_realtime_client(client_options) }

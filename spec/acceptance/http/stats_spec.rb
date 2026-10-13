@@ -48,7 +48,7 @@ describe Ably::PubSub::Http::Client, '#stats' do
   end
 
   vary_by_protocol do
-    let(:client) {  Ably::Internal.create_http_client(key: api_key, environment: environment, protocol: protocol) }
+    let(:client) {  Ably::Internal.create_http_client(key: api_key, endpoint: endpoint, protocol: protocol) }
 
     describe 'fetching application stats' do
       it 'returns a PaginatedResult object' do
