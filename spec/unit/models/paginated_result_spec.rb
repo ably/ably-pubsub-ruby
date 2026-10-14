@@ -5,7 +5,7 @@ describe Ably::Models::PaginatedResult do
   let(:paginated_result_class) { Ably::Models::PaginatedResult }
   let(:headers) { Hash.new }
   let(:client) do
-    instance_double('Ably::Rest::Client', logger: Ably::Models::NilLogger.new).tap do |client|
+    instance_double('Ably::PubSub::Http::Client', logger: Ably::Models::NilLogger.new).tap do |client|
       allow(client).to receive(:get).and_return(http_response)
     end
   end
@@ -87,7 +87,7 @@ describe Ably::Models::PaginatedResult do
       }
     end
     let(:paged_client) do
-      instance_double('Ably::Rest::Client', logger: Ably::Models::NilLogger.new).tap do |client|
+      instance_double('Ably::PubSub::Http::Client', logger: Ably::Models::NilLogger.new).tap do |client|
         allow(client).to receive(:get).and_return(http_response_page2)
       end
     end
@@ -125,7 +125,7 @@ describe Ably::Models::PaginatedResult do
       end
     end
 
-    if defined?(Ably::Realtime)
+    if defined?(Ably::PubSub::Realtime)
       context 'with option async_blocking_operations: true' do
         include RSpec::EventMachine
 
