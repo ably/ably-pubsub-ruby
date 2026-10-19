@@ -4,7 +4,7 @@ require 'spec_helper'
 # Very high level test coverage of the Realtime::Auth object which is just an async
 # wrapper around the Ably::Auth object
 #
-describe Ably::Realtime::Auth, :event_machine do
+describe Ably::PubSub::Realtime::Auth, :event_machine do
   def disconnect_transport(connection)
     if connection.transport
       connection.transport.close_connection_after_writing
@@ -14,9 +14,9 @@ describe Ably::Realtime::Auth, :event_machine do
   end
 
   vary_by_protocol do
-    let(:default_options) { { key: api_key, environment: environment, protocol: protocol } }
+    let(:default_options) { { key: api_key, endpoint: endpoint, protocol: protocol } }
     let(:client_options)  { default_options }
-    let(:client)          { auto_close Ably::Realtime::Client.new(client_options) }
+    let(:client)          { auto_close Ably::Internal.create_realtime_client(client_options) }
     let(:auth)            { client.auth }
 
     context 'with basic auth' do
@@ -200,7 +200,7 @@ describe Ably::Realtime::Auth, :event_machine do
         end
 
         context 'with auth_callback blocking' do
-          let(:rest_auth_client) { Ably::Rest::Client.new(default_options.merge(key: api_key)) }
+          let(:rest_auth_client) { Ably::Internal.create_http_client(default_options.merge(key: api_key)) }
           let(:client_options)   { default_options.merge(auth_callback: auth_callback) }
           let(:pause)            { 5 }
 
@@ -231,7 +231,7 @@ describe Ably::Realtime::Auth, :event_machine do
         context 'when implicitly called, with an explicit ClientOptions client_id' do
           let(:client_id)        { random_str }
           let(:client_options)   { default_options.merge(auth_callback: lambda { |token_params| auth_token_object }, client_id: client_id, log_level: :none) }
-          let(:rest_auth_client) { Ably::Rest::Client.new(default_options.merge(key: api_key, client_id: 'invalid')) }
+          let(:rest_auth_client) { Ably::Internal.create_http_client(default_options.merge(key: api_key, client_id: 'invalid')) }
 
           context 'and an incompatible client_id in a TokenDetails object passed to the auth callback' do
             let(:auth_token_object) { rest_auth_client.auth.request_token }
@@ -280,8 +280,8 @@ describe Ably::Realtime::Auth, :event_machine do
 
           let(:client_id)          { random_str }
           let(:client_options)     { default_options.merge(auth_callback: auth_proc, client_id: client_id, log_level: :none) }
-          let(:valid_auth_token)   { Ably::Rest::Client.new(default_options.merge(key: api_key, client_id: client_id)).auth.request_token }
-          let(:invalid_auth_token) { Ably::Rest::Client.new(default_options.merge(key: api_key, client_id: 'invalid')).auth.request_token }
+          let(:valid_auth_token)   { Ably::Internal.create_http_client(default_options.merge(key: api_key, client_id: client_id)).auth.request_token }
+          let(:invalid_auth_token) { Ably::Internal.create_http_client(default_options.merge(key: api_key, client_id: 'invalid')).auth.request_token }
 
           context 'and an incompatible client_id in a TokenDetails object passed to the auth callback' do
             it 'rejects a TokenDetails object with an incompatible client_id and fails with an exception' do
@@ -301,8 +301,8 @@ describe Ably::Realtime::Auth, :event_machine do
         end
 
         context 'when already authenticated with a valid token' do
-          let(:rest_client)      { Ably::Rest::Client.new(default_options) }
-          let(:client_publisher) { auto_close Ably::Realtime::Client.new(default_options) }
+          let(:rest_client)      { Ably::Internal.create_http_client(default_options) }
+          let(:client_publisher) { auto_close Ably::Internal.create_realtime_client(default_options) }
           let(:basic_capability) { JSON.dump("foo" => ["subscribe"]) }
           let(:basic_token_cb)   { lambda do |token_params|
             rest_client.auth.create_token_request({ capability: basic_capability })
@@ -833,7 +833,7 @@ describe Ably::Realtime::Auth, :event_machine do
     end
 
     describe '#client_id_validated?' do
-      let(:auth) { Ably::Rest::Client.new(default_options.merge(key: api_key)).auth }
+      let(:auth) { Ably::Internal.create_http_client(default_options.merge(key: api_key)).auth }
 
       context 'when using basic auth' do
         let(:client_options) { default_options.merge(key: api_key) }
@@ -1082,7 +1082,7 @@ describe Ably::Realtime::Auth, :event_machine do
       context 'when using auth_callback' do
         let(:token_callback) do
           lambda do |token_params|
-            Ably::Rest::Client.new(default_options).auth.request_token({}, { auth_url: auth_url, auth_params: auth_params }).token
+            Ably::Internal.create_http_client(default_options).auth.request_token({}, { auth_url: auth_url, auth_params: auth_params }).token
           end
         end
         let(:client_options) { default_options.merge(auth_callback: token_callback) }
@@ -1116,7 +1116,7 @@ describe Ably::Realtime::Auth, :event_machine do
       end
 
       context 'when the client is initialized with ClientOptions and the token is a JWT token' do
-        let(:client_options) { { token: token, environment: environment, protocol: protocol } }
+        let(:client_options) { { token: token, endpoint: endpoint, protocol: protocol } }
 
         context 'when credentials are valid' do
           let(:token) { Faraday.get("#{auth_url}?keyName=#{key_name}&keySecret=#{key_secret}").body }
@@ -1134,7 +1134,7 @@ describe Ably::Realtime::Auth, :event_machine do
         context 'when credentials are invalid' do
           let(:key_secret) { 'invalid' }
           let(:token) { Faraday.get("#{auth_url}?keyName=#{key_name}&keySecret=#{key_secret}").body }
-          let(:client_options) { { token: token, environment: environment, protocol: protocol, log_level: :none } }
+          let(:client_options) { { token: token, endpoint: endpoint, protocol: protocol, log_level: :none } }
 
           it 'fails with an invalid signature error' do
             client.connection.once(:disconnected) do |state_change|
@@ -1243,8 +1243,8 @@ describe Ably::Realtime::Auth, :event_machine do
             forbidden_channel.publish('not-allowed').errback do |error|
               expect(error.code).to eql(40160)
 
-              allowed_channel.publish(message_name) do |message|
-                expect(message.name).to eql(message_name)
+              allowed_channel.publish(message_name) do |result|
+                expect(result).to be_a(Ably::Models::PublishResult)
                 stop_reactor
               end
             end

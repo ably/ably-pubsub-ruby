@@ -23,7 +23,7 @@ module Ably
 
       def start(notification)
         puts "\n\e[33m --> Creating SPEC.md <--\e[0m\n"
-        scope = if defined?(Ably::Realtime)
+        scope = if defined?(Ably::PubSub::Realtime)
           'Realtime & REST'
         else
           'REST'

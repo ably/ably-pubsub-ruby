@@ -9,7 +9,7 @@ describe Ably::Models::MessageEncoders::Base64 do
   let(:base64_data)         { Base64.encode64(decoded_data) }
   let(:binary_data)         { MessagePack.pack(decoded_data) }
   let(:base64_binary_data)  { Base64.encode64(binary_data) }
-  let(:client)              { instance_double('Ably::Realtime::Client') }
+  let(:client)              { instance_double('Ably::PubSub::Realtime::Client') }
 
   subject { Ably::Models::MessageEncoders::Base64.new(client) }
 
