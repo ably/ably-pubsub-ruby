@@ -9,7 +9,7 @@ describe Ably::Models::MessageEncoders::Json do
   let(:array_data)          { ['value', 123] }
   let(:array_string_data)   { JSON.dump(array_data) }
 
-  let(:client)              { instance_double('Ably::Realtime::Client') }
+  let(:client)              { instance_double('Ably::PubSub::Realtime::Client') }
 
   subject { Ably::Models::MessageEncoders::Json.new(client) }
 

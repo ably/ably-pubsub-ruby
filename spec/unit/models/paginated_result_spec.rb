@@ -5,7 +5,7 @@ describe Ably::Models::PaginatedResult do
   let(:paginated_result_class) { Ably::Models::PaginatedResult }
   let(:headers) { Hash.new }
   let(:client) do
-    instance_double('Ably::Rest::Client', logger: Ably::Models::NilLogger.new).tap do |client|
+    instance_double('Ably::PubSub::Http::Client', logger: Ably::Models::NilLogger.new).tap do |client|
       allow(client).to receive(:get).and_return(http_response)
     end
   end
@@ -87,7 +87,7 @@ describe Ably::Models::PaginatedResult do
       }
     end
     let(:paged_client) do
-      instance_double('Ably::Rest::Client', logger: Ably::Models::NilLogger.new).tap do |client|
+      instance_double('Ably::PubSub::Http::Client', logger: Ably::Models::NilLogger.new).tap do |client|
         allow(client).to receive(:get).and_return(http_response_page2)
       end
     end
@@ -125,41 +125,33 @@ describe Ably::Models::PaginatedResult do
       end
     end
 
-    if defined?(Ably::Realtime)
-      context 'with option async_blocking_operations: true' do
-        include RSpec::EventMachine
-
+    if defined?(Ably::PubSub::Realtime)
+      context 'with option async_blocking_operations: true', :event_machine do
         subject do
           paginated_result_class.new(http_response, full_url, paged_client, async_blocking_operations: true)
         end
 
         context '#next' do
           it 'returns a SafeDeferrable that catches exceptions in callbacks and logs them' do
-            run_reactor do
-              expect(subject.next).to be_a(Ably::Util::SafeDeferrable)
-              stop_reactor
-            end
+            expect(subject.next).to be_a(Ably::Util::SafeDeferrable)
+            stop_reactor
           end
 
           it 'allows a success callback block to be added' do
-            run_reactor do
-              subject.next do |paginated_result|
-                expect(paginated_result).to be_a(Ably::Models::PaginatedResult)
-                stop_reactor
-              end
+            subject.next do |paginated_result|
+              expect(paginated_result).to be_a(Ably::Models::PaginatedResult)
+              stop_reactor
             end
           end
         end
 
         context '#first' do
           it 'calls the errback callback when first page headers are missing' do
-            run_reactor do
-              subject.next do |paginated_result|
-                deferrable = subject.first
-                deferrable.errback do |error|
-                  expect(error).to be_a(Ably::Exceptions::PageMissing)
-                  stop_reactor
-                end
+            subject.next do |paginated_result|
+              deferrable = subject.first
+              deferrable.errback do |error|
+                expect(error).to be_a(Ably::Exceptions::PageMissing)
+                stop_reactor
               end
             end
           end
