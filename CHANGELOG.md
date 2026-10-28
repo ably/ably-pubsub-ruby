@@ -1,5 +1,36 @@
 # Change Log
 
+## [v2.0.0](https://github.com/ably/ably-pubsub-ruby/tree/v2.0.0)
+
+[Full Changelog](https://github.com/ably/ably-pubsub-ruby/compare/v1.2.8...v2.0.0)
+
+This is a major release. The `ably` gem is replaced by two gems released together at the same version: `ably-pubsub-server`, which applications depend on, and `ably-pubsub-core`. See the [migration guide](./UPDATING.md) for details on upgrading from 1.x.
+
+**Breaking changes:**
+
+* Split the SDK into the `ably-pubsub-core` and `ably-pubsub-server` gems; clients are created with `Ably::PubSub::Server.create_http_client` and `Ably::PubSub::Server.create_realtime_client` (#458)
+* Move client namespaces under `Ably::PubSub`: `Ably::Rest` becomes `Ably::PubSub::Http` and `Ably::Realtime` becomes `Ably::PubSub::Realtime` (#458)
+* Replace the `environment`, `rest_host`, `realtime_host` and `fallback_hosts_use_default` options with the `endpoint` client option; traffic moves to `main.realtime.ably.net` (#458)
+* Raise when releasing a realtime channel that isn't detached (RTS4c-e) (#458, #460)
+* Upgrade to Ably protocol version 5 (#450)
+* `publish` now returns an `Ably::Models::PublishResult` with message serials (RSL1n) (#450)
+* Rewrite the `Stats` model to match spec v2.1+ (TS12) (#450)
+
+**Implemented enhancements:**
+
+* Add `update_message`, `delete_message` and `append_message` for HTTP and Realtime channels (RSL15/RTL32) (#450)
+
+**Fixed bugs:**
+
+* Fix REST presence query params to use the correct camelCase format (`clientId`, `connectionId`) (#458)
+
+**Other changes:**
+
+* Rename the repository and SDK agent identifier to `ably-pubsub-ruby` (#457, #458)
+* Add a lockstep release workflow publishing both gems via RubyGems trusted publishing (#455, #458)
+* Harden GitHub Actions workflows (#451)
+* Improve the README (#446, #447)
+
 ## [v1.2.8](https://github.com/ably/ably-ruby/tree/v1.2.8)
 
 [Full Changelog](https://github.com/ably/ably-ruby/compare/v1.2.7...v1.2.8)
