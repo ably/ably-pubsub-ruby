@@ -71,24 +71,28 @@ client.channels.get('test-channel').publish('test-event', 'hello world')
 > [!IMPORTANT]
 > Server clients must authenticate with an API key. To use a token instead, see [Server clients and token authentication](https://ably.com/docs/auth/token#server-token-auth).
 
-Your server also issues the tokens that devices authenticate with. Return a token request from
-the endpoint your devices use as their `authUrl`:
+The following endpoint issues token requests. Devices using a device SDK set `authUrl` to its URL,
+for example `https://your-server.example.com/ably-auth`:
 
 ```ruby
+require 'sinatra'
 require 'ably/pubsub/server'
 
 ably_api_key = ENV.fetch('ABLY_API_KEY')
 client = Ably::PubSub::Server.create_http_client(key: ably_api_key)
 
-# Authenticate the caller first. Grant only the operations this user needs.
-# Without a capability, the token gets all of the API key's capabilities.
-token_request = client.auth.create_token_request(
-  client_id: 'me', # the authenticated user's ID
-  capability: { 'test-channel' => ['publish', 'subscribe', 'history'] }
-)
+get '/ably-auth' do
+  # Authenticate the caller first. Grant only the operations this user needs.
+  # Without a capability, the token gets all of the API key's capabilities.
+  user_id = 'me' # the signed-in user's ID, from your session
+  token_request = client.auth.create_token_request(
+    client_id: user_id,
+    capability: { 'test-channel' => ['publish', 'subscribe', 'history'] }
+  )
 
-# Return this JSON unchanged, with the content type application/json.
-puts token_request.to_json
+  content_type :json
+  token_request.to_json
+end
 ```
 
 See [token authentication](https://ably.com/docs/auth/token) for how devices use it.
