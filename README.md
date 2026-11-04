@@ -1,128 +1,190 @@
-# Ably Pub/Sub Ruby SDK
+![Ably Pub/Sub Ruby Header](https://raw.githubusercontent.com/ably/ably-pubsub-ruby/main/images/rubySDK-github.png)
 
-![Ably Pub/Sub Ruby Header](images/rubySDK-github.png)
-[![Gem Version](https://img.shields.io/gem/v/ably?style=flat)](https://rubygems.org/gems/ably)
-[![Coverage Status](https://coveralls.io/repos/ably/ably-pubsub-ruby/badge.svg)](https://coveralls.io/r/ably/ably-pubsub-ruby)
+[![Gem: ably-pubsub-server](https://img.shields.io/gem/v/ably-pubsub-server?label=ably-pubsub-server)](https://rubygems.org/gems/ably-pubsub-server)
 [![License](https://badgen.net/github/license/ably/ably-pubsub-ruby)](https://github.com/ably/ably-pubsub-ruby/blob/main/LICENSE)
 
----
+# Ably Pub/Sub Ruby SDK
 
-Build any realtime experience using Ably’s Pub/Sub Ruby SDK, Supported on all popular platforms and frameworks.
+The Ruby SDK for [Ably Pub/Sub](https://ably.com/docs/basics): publish and subscribe to channels,
+and use message history, presence and push notification administration, from servers.
 
-Ably Pub/Sub provides flexible APIs that deliver features such as pub-sub messaging, message history, presence, and push notifications. Utilizing Ably’s realtime messaging platform, applications benefit from its highly performant, reliable, and scalable infrastructure.
+## Overview
 
-Find out more:
+This SDK provides the server package only, for trusted backends authenticating with an API key.
+There is no device package; for end-user devices, use a device SDK such as
+[JavaScript](https://github.com/ably/ably-pubsub-js), [Swift/Objective-C](https://github.com/ably/ably-pubsub-cocoa),
+[Java/Android](https://github.com/ably/ably-pubsub-java), [.NET](https://github.com/ably/ably-pubsub-dotnet)
+or [Flutter](https://github.com/ably/ably-pubsub-flutter).
 
-* [Ably Pub/Sub docs.](https://ably.com/docs/basics)
-* [Ably Pub/Sub examples.](https://ably.com/examples?product=pubsub)
+| Package | Use it for | Entry point |
+|---------|-----------|-------------|
+| `ably-pubsub-server` | Servers and other trusted backend environments | `Ably::PubSub::Server.create_realtime_client`, `Ably::PubSub::Server.create_http_client` |
 
----
+## Requirements
 
-## Getting started
-
-Everything you need to get started with Ably:
-
-* [Getting started with Pub/Sub using Ruby.](https://ably.com/docs/getting-started/ruby)
-* [SDK Setup for Ruby.](https://ably.com/docs/getting-started/setup?lang=ruby)
-
----
-
-## Supported platforms
-
-Ably aims to support a wide range of platforms and browsers. If you experience any compatibility issues, open an issue in the repository or contact [Ably support](https://ably.com/support).
-
-| Platform       | Support |
-|----------------|---------|
-| Ruby           | >= 2.7 and 3.x. For EventMachine compatibility with Ruby 3.x |
-| EventMachine   | Required for using the Realtime API. Compatible with Ruby 3.x with OpenSSL configuration. |
-| libcurl        | Required since v1.1.5. On Debian-based systems, install via `sudo apt-get install libcurl4`. |
-
-> [!IMPORTANT]
-> SDK versions < 1.2.5 will be [deprecated](https://ably.com/docs/platform/deprecate/protocol-v1) from November 1, 2025.
-
----
-
+Ruby 2.7 or later (tested on 2.7 to 3.3). The SDK also needs the libcurl system library (on
+Debian-based systems, install it with `apt-get install libcurl4`).
 
 ## Installation
 
-To get started with your project, install the package:
-
-```sh
-# Create a new Gemfile
-echo "source 'https://rubygems.org'" > Gemfile
-echo "gem 'ably'" >> Gemfile
-
-
-# Install the gem
-bundle install
+```bash
+bundle add ably-pubsub-server
 ```
 
-> [!NOTE]
-Install [Ruby](https://www.ruby-lang.org/en/documentation/installation/) version 2.7 or greater.
+## Quick start
 
----
-
-### EventMachine
-
-To use the Ably Realtime SDK in Ruby, the `EventMachine` reactor loop must be running. This is required because the Realtime library depends on EventMachine to handle asynchronous events.
-
-Wrap your code inside a `EventMachine.run` block:
+Use an API key on a server. The samples read it from the `ABLY_API_KEY` environment variable; set it
+to an API key from your [Ably dashboard](https://ably.com/accounts/any/apps/any/app_keys). The
+following code connects, subscribes to a channel, publishes a message to it and waits for the
+message to arrive.
 
 ```ruby
 require 'ably/pubsub/server'
 
 EventMachine.run do
-  client = Ably::PubSub::Server.create_realtime_client(key: 'your-api-key')
+  ably_api_key = ENV.fetch('ABLY_API_KEY')
+  realtime = Ably::PubSub::Server.create_realtime_client(key: ably_api_key)
+  channel = realtime.channels.get('test-channel')
 
-  client.connection.connect do
-    puts "Connected with connection ID: #{client.connection.id}"
+  # Subscribing attaches the channel.
+  channel.subscribe('test-event') do |message|
+    puts "Received: #{message.data}"
+    realtime.close { EventMachine.stop }
   end
-```
 
----
-
-## Usage
-
-The following code connects to Ably's realtime messaging service, subscribes to a channel to receive messages, and publishes a test message to that same channel.
-
-```ruby
-  # Initialize Ably Realtime client
-  realtime_client = Ably::PubSub::Server.create_realtime_client(key: 'your-ably-api-key', client_id: 'me')
-  
-  # Wait for connection to be established
-  realtime_client.connection.on(:connected) do
-    puts 'Connected to Ably'
-    
-    # Get a reference to the 'test-channel' channel
-    channel = realtime_client.channels.get('test-channel')
-    
-    # Subscribe to all messages published to this channel
-    channel.subscribe do |message|
-      puts "Received message: #{message.data}"
-    end
-    
-    # Publish a test message to the channel
-    channel.publish 'test-event', 'hello world'
+  channel.attach do
+    channel.publish('test-event', 'hello world')
   end
 end
-
 ```
 
----
+To publish over HTTP without a realtime connection, create an HTTP client instead:
 
-## Releases
+```ruby
+require 'ably/pubsub/server'
 
-The [CHANGELOG.md](./CHANGELOG.md) contains details of the latest releases for this SDK. You can also view all Ably releases on [changelog.ably.com](https://changelog.ably.com).
+ably_api_key = ENV.fetch('ABLY_API_KEY')
+client = Ably::PubSub::Server.create_http_client(key: ably_api_key)
+client.channels.get('test-channel').publish('test-event', 'hello world')
+```
 
----
+> [!IMPORTANT]
+> Server clients must authenticate with an API key. To use a token instead, see [Server clients and token authentication](https://ably.com/docs/auth/token#server-token-auth).
+
+The following endpoint issues token requests. Devices using a device SDK set `authUrl` to its URL,
+for example `https://your-server.example.com/ably-auth`:
+
+```ruby
+require 'sinatra'
+require 'ably/pubsub/server'
+
+ably_api_key = ENV.fetch('ABLY_API_KEY')
+client = Ably::PubSub::Server.create_http_client(key: ably_api_key)
+
+get '/ably-auth' do
+  # Authenticate the caller first. Grant only the operations this user needs.
+  # Without a capability, the token gets all of the API key's capabilities.
+  user_id = 'me' # the signed-in user's ID, from your session
+  token_request = client.auth.create_token_request(
+    client_id: user_id,
+    capability: { 'test-channel' => ['publish', 'subscribe', 'history'] }
+  )
+
+  content_type :json
+  token_request.to_json
+end
+```
+
+See [token authentication](https://ably.com/docs/auth/token) for how devices use it.
+
+## Migrating from 1.x
+
+Version 2.0 renames the gem and creates clients with factory methods.
+
+| | 1.x | 2.0 |
+|---|---|---|
+| Package | `ably` or `ably-rest` | `ably-pubsub-server` |
+| Require | `require 'ably'` or `require 'ably-rest'` | `require 'ably/pubsub/server'` |
+| Realtime client | `Ably::Realtime::Client.new(key: key)` | `Ably::PubSub::Server.create_realtime_client(key: key)` |
+| HTTP client | `Ably::Rest::Client.new(key: key)` | `Ably::PubSub::Server.create_http_client(key: key)` |
+
+See [UPDATING.md](https://github.com/ably/ably-pubsub-ruby/blob/main/UPDATING.md#version-1x-ably-gem-to-200-ably-pubsub-server-gem) for all other changes.
+
+## Common configuration
+
+Both factories accept an API key or token string, or an options `Hash`.
+
+### Endpoint
+
+`endpoint` selects the Ably host for HTTP requests and the realtime connection. It replaces the
+1.x `environment`, `rest_host` and `realtime_host` options. 2.0 ignores those options, so a client
+that still sets them connects to production.
+
+```ruby
+ably_api_key = ENV.fetch('ABLY_API_KEY')
+realtime = Ably::PubSub::Server.create_realtime_client(key: ably_api_key, endpoint: 'nonprod:sandbox')
+```
+
+- Never put a port in `endpoint`: `localhost:8080` is not a hostname and does not resolve.
+- Set the port with `tls_port`, or with `port` when TLS is off.
+- With TLS off (`tls: false`), use token authentication.
+
+See [UPDATING.md](https://github.com/ably/ably-pubsub-ruby/blob/main/UPDATING.md#connection-options-endpoint) for how the old options map to
+`endpoint`.
+
+### Logging
+
+Set `log_level` to `:fatal`, `:error`, `:warn` (the default), `:info`, `:debug` or `:none`. Logs
+go to standard output through Ruby's `Logger`. To send them elsewhere, pass a `Logger`-compatible
+object as `logger`:
+
+```ruby
+require 'logger'
+require 'ably/pubsub/server'
+
+ably_api_key = ENV.fetch('ABLY_API_KEY')
+client = Ably::PubSub::Server.create_http_client(
+  key: ably_api_key,
+  log_level: :debug,
+  logger: Logger.new($stderr)
+)
+```
+
+## Platform notes
+
+### EventMachine
+
+- The realtime client runs on [EventMachine](https://github.com/eventmachine/eventmachine). Create
+  and use it inside `EventMachine.run`.
+- The HTTP client is synchronous. It does not need the EventMachine reactor.
+- The gem depends on EventMachine even if you use only the HTTP client.
+
+## Known limitations
+
+- [LiveObjects](https://ably.com/docs/liveobjects) is not supported.
+- [Token revocation](https://ably.com/docs/auth/revocation) is not supported.
+- [Delta compression](https://ably.com/docs/channels/options/deltas) is not supported.
+- A Ruby client cannot be a [push notification](https://ably.com/docs/push) target. The push
+  admin API is supported.
+
+## Further reading
+
+- [Getting started with Pub/Sub using Ruby](https://ably.com/docs/getting-started/ruby)
+- [Ably Pub/Sub documentation](https://ably.com/docs/basics) and [examples](https://ably.com/examples?product=pubsub)
+- [Token authentication](https://ably.com/docs/auth/token)
+- [UPDATING.md](https://github.com/ably/ably-pubsub-ruby/blob/main/UPDATING.md): migrating from 1.x
+- [CHANGELOG.md](https://github.com/ably/ably-pubsub-ruby/blob/main/CHANGELOG.md): release notes; all Ably releases are listed on [changelog.ably.com](https://changelog.ably.com)
 
 ## Contributing
 
-Read the [CONTRIBUTING.md](./CONTRIBUTING.md) guidelines to contribute to Ably.
-
----
+Read [CONTRIBUTING.md](https://github.com/ably/ably-pubsub-ruby/blob/main/CONTRIBUTING.md) before contributing; it also describes the release
+process.
 
 ## Support, feedback and troubleshooting
 
-For help or technical support, visit Ably's [support page](https://ably.com/support). You can also view the [community reported Github issues](https://github.com/ably/ably-pubsub-ruby/issues) or raise one yourself.
+For help, visit Ably's [support page](https://ably.com/support). Report bugs and compatibility
+problems on [GitHub Issues](https://github.com/ably/ably-pubsub-ruby/issues).
 
+## License
+
+Licensed under the Apache License, Version 2.0. See [LICENSE](https://github.com/ably/ably-pubsub-ruby/blob/main/LICENSE).
